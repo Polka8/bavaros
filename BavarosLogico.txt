@@ -1,0 +1,11 @@
+
+utente(id_utente(PK), nome, psw, email, ruolo)
+prenotazione(id_prenotazione(PK),data_prenotata,stato,id_utente,data_annullamento,data_creazione,note_aggiuntive,numero_posti) 
+piatto(id_piatto(PK), nome, prezzo, descrizione)  
+dettagli_prenotazione(id_dettaglio(PK),fk_prenotazione,fk_piatto,quantità)
+
+prenotazione(id_utente) --> utente
+dettagli_prenotazione(fk_prenotazione) --> id_prenotazione
+dettagli_prenotazione(fk_piatto) --> piatto
+
+

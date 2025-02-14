@@ -1,0 +1,51 @@
+Progetto fullstack ristorante:
+Frontend:angular
+Backend:python
+Il sito si apre con la pagina principale del titolo,la quale ha al di sotto le recensioni principali, i menù e la possibilità di prenotare
+In fondo alla pagina ci sono o contatti e le informazioni del ristorante(indirizzo ed eventuali certificazioni).A sinistra della pagina,se si clicca su un icona,si apre la sezione del menu,con icone inerenti al login e lo storico prenotazioni.Per prenotare devo essere loggato,dunque se non ho effettuato il login verrò indirizzato alla pagina del login o dell'iscrizione.
+Se effettuo il login come cliente,potrò prenotare e vedere il mio storico delle prenotazioni(una pagina in cui saranno riportare le singole prenotazioni attive e scadute con l'ora specificata e la possibilità di annullare quelle attive)
+Se effettuo il login come admin(proprietario)potrò vedere lo storico delle prenotazioni sotto forma di calendario, vedendo le prenotazioni passate e future,attive e scadute in un calendario che copre mensilità,giorno,settimana
+Come admin,avrò anche la possibilità di vedere, sotto forma di newsletter( posta come icona aggiuntiva nel menu laterale)tutte le prenotazioni che sono state annullate.
+Inoltre,come admin ci sarà nella stessa barra laterale l'icona che mi permetterà di accedere alla pagina per vedere le risorse disponibili.
+Come admin posso anche modificare il  menu 
+Pieno controllo dei dati dell'admin(modifica la prenotazione o annulla) 
+abri@MSI MINGW64 ~/Downloads/programmazione/programmazione web/bavaros/frontend/src/assets (master)
+$ ng serve --open
+Component HMR has been enabled.
+If you encounter application reload issues, you can manually reload the page to bypass HMR and/or disable this feature with the `--no-hmr` command line option.
+Please consider reporting any issues you encounter here: https://github.com/angular/angular-cli/issues
+
+Application bundle generation failed. [2.393 seconds]
+
+X [ERROR] Could not resolve "assets/hero-bg.jpg" [plugin angular-css-resource]
+
+    angular:styles/component:scss;5b97c35828a73ef4e4ad9184cbfaf2c27d3fc9976a65e1c3b5afccafa582e09b;C:/Users/gabri/Downloads/programmazione/programmazione web/bavaros/frontend/src/app/home/home.component.ts:2:75:
+      2 │ ...rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("assets/hero-bg.jpg");
+        ╵                                                 ~~~~~~~~~~~~~~~~~~~~
+
+  You can mark the path "assets/hero-bg.jpg" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
+  Preprocessor stylesheets may not show the exact file location of the error.
+
+
+X [ERROR] Undefined function.
+  ╷
+3 │ $primary-palette: mat.define-palette(mat.$indigo-palette);
+  │                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ╵
+  ..\styles.scss 3:19  root stylesheet [plugin angular-sass]
+
+    angular:styles/global:styles:1:8:
+      1 │ @import 'src/styles.scss';
+        ╵         ~~~~~~~~~~~~~~~~~
+
+
+Watch mode enabled. Watching for file changes...
+
+
+git init                           # Inizializza Git nella cartella
+git remote add origin https://github.com/Polka8/bavaros
+git add .                          # Aggiunge tutti i file
+git commit -m "Prima versione del progetto"
+git branch -M main
+git push -u origin main            # Carica i file su GitHub
+
