@@ -1,0 +1,26 @@
+// styles.scss
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Reset base */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Variabili globali */
+:root {
+  --primary-color: #3f51b5;
+  --accent-color: #ff4081;
+  --text-light: #ffffff;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Stili generici per i componenti Material */
+.mat-button {
+  letter-spacing: 0.05rem;
+}
