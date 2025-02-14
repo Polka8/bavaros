@@ -42,10 +42,10 @@ X [ERROR] Undefined function.
 Watch mode enabled. Watching for file changes...
 
 
-git init                           # Inizializza Git nella cartella
-git remote add origin https://github.com/Polka8/bavaros
-git add .                          # Aggiunge tutti i file
+git init                           
+git remote add origin https://github.com/Polka8/bavaros.git
+git add .                          
 git commit -m "Prima versione del progetto"
 git branch -M main
-git push -u origin main            # Carica i file su GitHub
+git push -u origin main            
 
