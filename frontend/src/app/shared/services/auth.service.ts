@@ -1,44 +1,15 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, catchError, tap, throwError } from 'rxjs';
+import { environment } from '../../environment/environment.component';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly AUTH_TOKEN_KEY = 'auth_token';
-  private loggedInSubject: BehaviorSubject<boolean>;
+  private http = inject(HttpClient);
+  private loggedIn = new BehaviorSubject<boolean>(false);
   private redirectUrl: string | null = null;
 
-  constructor() {
-    this.loggedInSubject = new BehaviorSubject<boolean>(this.checkInitialAuthState());
-  }
-
-  private checkInitialAuthState(): boolean {
-    return !!localStorage.getItem(this.AUTH_TOKEN_KEY);
-  }
-
-  get isLoggedIn$(): Observable<boolean> {
-    return this.loggedInSubject.asObservable();
-  }
-
-  isLoggedIn(): boolean {
-    return this.loggedInSubject.value;
-  }
-
-  login(token: string): void {
-    localStorage.setItem(this.AUTH_TOKEN_KEY, token);
-    this.loggedInSubject.next(true);
-  }
-
-  logout(): void {
-    localStorage.removeItem(this.AUTH_TOKEN_KEY);
-    this.loggedInSubject.next(false);
-    this.redirectUrl = null;
-  }
-
-  getToken(): string | null {
-    return localStorage.getItem(this.AUTH_TOKEN_KEY);
-  }
+  isLoggedIn$ = this.loggedIn.asObservable();
 
   setRedirectUrl(url: string): void {
     this.redirectUrl = url;
@@ -47,4 +18,16 @@ export class AuthService {
   getRedirectUrl(): string | null {
     return this.redirectUrl;
   }
+register(userData: any) {
+  console.log('[DEBUG] Endpoint:', `${environment.apiUrl}/register`);
+  console.log('[DEBUG] Dati inviati:', userData);
+  
+  return this.http.post(`${environment.apiUrl}/register`, userData).pipe(
+    tap((response: any) => console.log('[DEBUG] Risposta API:', response)),
+    catchError((error: HttpErrorResponse) => {
+      console.error('[DEBUG] Errore API:', error);
+      return throwError(() => error);
+    })
+  );
+}
 }

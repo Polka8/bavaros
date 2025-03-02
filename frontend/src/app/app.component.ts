@@ -1,16 +1,18 @@
-// src/app/app.component.ts
+
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router'; // Add this import
+import { RouterOutlet } from '@angular/router'; 
 import { NavbarComponent } from './core/navbar/navbar.component';
 import { FooterComponent } from './core/footer/footer.component';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
-    RouterOutlet, // Add this line
+    RouterOutlet, 
     NavbarComponent,
-    FooterComponent
+    FooterComponent,
+    HttpClientModule,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']

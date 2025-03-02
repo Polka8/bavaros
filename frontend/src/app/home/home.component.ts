@@ -5,11 +5,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { Router } from '@angular/router';
+import { Router,RouterModule } from '@angular/router';
 @Component({
   selector: 'app-home',
   standalone: true,
   imports: [
+    RouterModule,
     CommonModule,
     MatButtonModule,
     MatCardModule,
@@ -113,7 +114,7 @@ import { Router } from '@angular/router';
 export class HomeComponent {
 constructor(private router: Router) {}
 navigateToRegistration() {
-  this.router.navigate(['/register']);
+  this.router.navigateByUrl('/register');
 }
   features = [
     { icon: 'star', title: 'Glovo', Image:'/assets/images/glovo.png', description: 'Consegna in 24/48 ore' },

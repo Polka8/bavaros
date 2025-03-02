@@ -1,54 +1,150 @@
+import { CommonModule } from '@angular/common';
+import { Component, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatIconModule} from '@angular/material/icon';
-import {MatInputModule} from '@angular/material/input';
-import {ChangeDetectionStrategy, Component, signal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {FormControl, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
-import {merge} from 'rxjs';
+import { AuthService } from '../../shared/services/auth.service';
+
 @Component({
   selector: 'app-register',
-  standalone: true, 
-  imports: [RouterLink,MatFormFieldModule, MatInputModule, FormsModule, ReactiveFormsModule, MatIconModule], 
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    RouterLink,
+    MatIconModule
+  ],
   template: `
-  <div class="example-container">
-  <mat-form-field>
-    <mat-label>Enter your email</mat-label>
-    <input
-      matInput
-      placeholder="pat@example.com"
-      [formControl]="email"
-      (blur)="updateErrorMessage()"
-      required
-    />
-    @if (email.invalid) {
-      <mat-error>{{errorMessage()}}</mat-error>
-    }
-  </mat-form-field>
-</div>
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="form-container">
+      <mat-form-field>
+        <mat-label>Nome</mat-label>
+        <input matInput formControlName="nome">
+        @if (registerForm.get('nome')?.hasError('required')) {
+          <mat-error>Campo obbligatorio</mat-error>
+        }
+      </mat-form-field>
 
-    <a routerLink="/login">Sei già registrato? Accedi</a>
+      <mat-form-field>
+        <mat-label>Cognome</mat-label>
+        <input matInput formControlName="cognome">
+        @if (registerForm.get('cognome')?.hasError('required')) {
+          <mat-error>Campo obbligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Email</mat-label>
+        <input 
+          matInput 
+          formControlName="email"
+          (blur)="updateEmailError()"
+          type="email">
+        @if (errorMessage()) {
+          <mat-error>{{ errorMessage() }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Password</mat-label>
+        <input 
+          matInput 
+          formControlName="password" 
+          type="password">
+        @if (registerForm.get('password')?.errors) {
+          <mat-error>
+            Minimo 8 caratteri con lettere e numeri
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <button 
+        mat-raised-button 
+        color="primary" 
+        type="submit"
+        [disabled]="loading">
+        {{ loading ? 'Registrazione in corso...' : 'Registrati' }}
+      </button>
+
+      <div class="message-container">
+        @if (successMessage) {
+          <div class="success-message">{{ successMessage }}</div>
+        }
+        @if (errorMessage()) {
+          <div class="error-message">{{ errorMessage() }}</div>
+        }
+      </div>
+
+      <a routerLink="/login" class="login-link">Hai già un account? Accedi</a>
+    </form>
   `,
   styleUrls: ['./register.component.scss']
 })
-
-
 export class RegisterComponent {
-  constructor(private router: Router) {
-    merge(this.email.statusChanges, this.email.valueChanges)
-    .pipe(takeUntilDestroyed())
-    .subscribe(() => this.updateErrorMessage());
-   }
-  readonly email = new FormControl('', [Validators.required, Validators.email]);
+  registerForm = new FormGroup({
+    nome: new FormControl('', [Validators.required]),
+    cognome: new FormControl('', [Validators.required]),
+    email: new FormControl('', [Validators.required, Validators.email]),
+    password: new FormControl('', [
+      Validators.required,
+      Validators.minLength(8),
+      Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/)
+    ])
+  });
 
+  loading = false;
+  successMessage = '';
   errorMessage = signal('');
-  updateErrorMessage() {
-    if (this.email.hasError('required')) {
-      this.errorMessage.set('You must enter a value');
-    } else if (this.email.hasError('email')) {
-      this.errorMessage.set('Not a valid email');
+
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  updateEmailError() {
+    const emailControl = this.registerForm.get('email');
+    
+    if (emailControl?.hasError('required')) {
+      this.errorMessage.set('Campo obbligatorio');
+    } else if (emailControl?.hasError('email')) {
+      this.errorMessage.set('Formato email non valido');
     } else {
       this.errorMessage.set('');
     }
   }
+
+onSubmit() {
+  if (this.registerForm.valid) {
+    this.loading = true;
+    const formValues = this.registerForm.getRawValue();
+
+    this.authService.register({
+      nome: formValues.nome!,
+      cognome: formValues.cognome!,
+      email: formValues.email!,
+      password: formValues.password!
+    }).subscribe({
+      next: () => {
+        this.successMessage = 'Registrazione completata!';
+        this.errorMessage.set('');
+        setTimeout(() => this.router.navigate(['/login']), 2000);
+      },
+      error: (err) => {
+        this.errorMessage.set(err.message || 'Errore durante la registrazione');
+        this.successMessage = '';
+        
+       
+        setTimeout(() => {
+          this.loading = false;
+        }, 1500); 
+      },
+      complete: () => {
+        this.loading = false; 
+      }
+    });
+  }
+}
 }
