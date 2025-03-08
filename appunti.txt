@@ -10,17 +10,7 @@ Come admin,avrò anche la possibilità di vedere, sotto forma di newsletter( pos
 Inoltre,come admin ci sarà nella stessa barra laterale l'icona che mi permetterà di accedere alla pagina per vedere le risorse disponibili.
 Come admin posso anche modificare il  menu 
 Pieno controllo dei dati dell'admin(modifica la prenotazione o annulla) 
-
-
-
-
-
-git init                           
-git remote add origin https://github.com/Polka8/bavaros.git
-git add .                          
-git commit -m "Prima versione del progetto"
-git branch -M main
-git push -u origin main            
+      
 
 struttura progetto:
 /bavaros
@@ -54,4 +44,15 @@ struttura progetto:
     app.routes.ts
     app.config.ts
     app.component.ts
-    ecc...
+    
+
+git init                           
+git remote add origin https://github.com/Polka8/bavaros.git
+git add .                          
+git commit -m "Prima versione del progetto"
+git branch -M main
+git push -u origin main      
+
+
+
+ / <ng-container *ngIf="user.role === 'admin'">

@@ -33,7 +33,7 @@ def init_routes(app):
             db.session.add(new_user)
             db.session.commit()
 
-            # Genera un token JWT
+            
             access_token = create_access_token(identity=new_user.id, expires_delta=timedelta(days=1))
 
             return jsonify({"message": "Registrazione completata", "token": access_token}), 201
@@ -41,7 +41,7 @@ def init_routes(app):
             db.session.rollback()
             return jsonify({"message": f"Errore server: {str(e)}"}), 500
 
-    # * Login *
+   
     @app.route('/api/login', methods=['POST'])
     def login():
         data = request.get_json()
@@ -52,11 +52,11 @@ def init_routes(app):
         if not user or not user.check_password(data['password']):
             return jsonify({"message": "Credenziali non valide"}), 401
 
-        # Genera il token JWT
+     
         access_token = create_access_token(identity=user.id, expires_delta=timedelta(days=1))
         return jsonify({"message": "Login riuscito", "token": access_token}), 200
 
-    # * Ottenere il profilo utente (protetto da autenticazione) *
+   
     @app.route('/api/profilo', methods=['GET'])
     @jwt_required()
     def get_profile():

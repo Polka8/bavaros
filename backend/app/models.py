@@ -1,4 +1,4 @@
-# backend/app/models.py
+
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 import enum
@@ -8,7 +8,7 @@ class RuoloEnum(enum.Enum):
     cliente = "cliente"
 
 class User(db.Model):
-    __tablename__ = 'utente'  # Specifica il nome della tabella
+    __tablename__ = 'utente' 
     id = db.Column('id_utente', db.Integer, primary_key=True)
     nome = db.Column(db.String(50), nullable=False)
     cognome = db.Column(db.String(50), nullable=False)
