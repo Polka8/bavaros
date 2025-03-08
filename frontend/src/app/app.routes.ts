@@ -1,4 +1,4 @@
-import {Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 import { authGuard } from './shared/guards/auth.guard';
 import { adminGuard } from './shared/guards/admin.guard';
 import { LoginComponent } from './auth/login/login.component';
@@ -25,5 +25,5 @@ export const routes: Routes = [
       { path: 'calendario', component: CalendarioComponent },
       { path: 'newsletter', component: NewsletterComponent }
     ]
-  },
+  }
 ];

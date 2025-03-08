@@ -18,16 +18,28 @@ export class AuthService {
   getRedirectUrl(): string | null {
     return this.redirectUrl;
   }
-register(userData: any) {
-  console.log('[DEBUG] Endpoint:', `${environment.apiUrl}/register`);
-  console.log('[DEBUG] Dati inviati:', userData);
-  
-  return this.http.post(`${environment.apiUrl}/register`, userData).pipe(
-    tap((response: any) => console.log('[DEBUG] Risposta API:', response)),
-    catchError((error: HttpErrorResponse) => {
-      console.error('[DEBUG] Errore API:', error);
-      return throwError(() => error);
-    })
-  );
-}
+
+  register(userData: any) {
+    return this.http.post(`${environment.apiUrl}/register`, userData).pipe(
+      tap(() => console.log('Registrazione avvenuta con successo')),
+      catchError((error: HttpErrorResponse) => throwError(() => error))
+    );
+  }
+
+  login(credentials: { email: string; password: string }) {
+    return this.http.post(`${environment.apiUrl}/login`, credentials).pipe(
+      tap((response: any) => {
+        console.log('[DEBUG] Login avvenuto:', response);
+        this.loggedIn.next(true);
+      }),
+      catchError((error: HttpErrorResponse) => {
+        console.error('[DEBUG] Errore Login:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  logout() {
+    this.loggedIn.next(false);
+  }
 }
