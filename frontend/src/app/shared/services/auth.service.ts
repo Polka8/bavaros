@@ -50,7 +50,7 @@ export class AuthService {
         console.log('[DEBUG] Login avvenuto:', response);
         if (response.token) {
           localStorage.setItem('token', response.token);
-          localStorage.setItem('userData', JSON.stringify(response.user)); // Salva i dati dell'utente
+          localStorage.setItem('userData', JSON.stringify(response.user)); 
         }
         this.loggedIn.next(true);
       }),
@@ -66,6 +66,11 @@ export class AuthService {
     const userData = localStorage.getItem('userData');
     return userData ? JSON.parse(userData) : null;
   }
+  getProfile() {
+    return this.http.get(`${environment.apiUrl}/profilo`);
+  }
+  
+  
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('userData');

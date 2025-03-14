@@ -88,7 +88,8 @@ import { AuthService } from '../shared/services/auth.service';
         
         <section class="hero-section">
           <div class="hero-content">
-            <h1>Benvenuti in Bavaros</h1>
+            <!-- Qui viene visualizzato "Benvenuto capo" se l'utente è admin, altrimenti "Benvenuti in Bavaros" -->
+            <h1>{{ isAdmin ? 'Benvenuto capo' : 'Benvenuti in Bavaros' }}</h1>
             <button mat-raised-button color="primary">Esplora ora</button>
           </div>
         </section>
@@ -96,7 +97,7 @@ import { AuthService } from '../shared/services/auth.service';
         <mat-grid-list cols="3" rowHeight="350px" class="features-grid">
           <mat-grid-tile *ngFor="let feature of features">
             <mat-card class="feature-card">
-              <mat-icon class="feature-icon" color="primary">{{ feature.icon }}</mat-icon>
+              <img [src]="feature.image" class="review-logo" alt="{{ feature.title }}">
               <mat-card-title>{{ feature.title }}</mat-card-title>
               <mat-card-content>{{ feature.description }}</mat-card-content>
             </mat-card>
@@ -147,9 +148,10 @@ import { AuthService } from '../shared/services/auth.service';
       width: 90%;
       height: 90%;
     }
-    .feature-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
+    .review-logo {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 10px;
     }
     .cta-section {
       text-align: center;
@@ -170,9 +172,9 @@ export class HomeComponent {
   userName: string | null = null;
   isAdmin: boolean = false;
   features = [
-    { icon: 'star', title: 'Glovo', image: '/assets/images/glovo.png', description: 'Consegna in 24/48 ore' },
-    { icon: 'verified_user', title: 'Pagamenti Sicuri', description: 'Transazioni criptate' },
-    { icon: 'support_agent', title: 'Assistenza 24/7', description: 'Supporto dedicato' }
+    { icon: 'google', title: 'Google Reviews', image: 'assets/images/google.png', description: '★★★★★ "Il miglior servizio che abbia mai provato!"' },
+    { icon: 'tripadvisor', title: 'TripAdvisor', image: 'assets/images/tripadvisor.png', description: '★★★★★ "Esperienza incredibile, assolutamente da provare!"' },
+    { icon: 'yelp', title: 'Yelp', image: 'assets/images/yelp.png', description: '★★★★★ "Servizio eccellente e qualità superiore!"' }
   ];
 
   constructor(
@@ -190,7 +192,7 @@ export class HomeComponent {
       const user = this.authService.getUserInfo();
       if (user) {
         this.userName = `${user.nome} ${user.cognome}`;
-        this.isAdmin = (user.ruolo === 'admin');  // Assumi che il ruolo sia salvato come stringa, ad esempio "admin"
+        this.isAdmin = (user.ruolo === 'admin');  // Assumi che il ruolo venga salvato come stringa, ad esempio "admin"
       }
     }
   }

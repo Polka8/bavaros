@@ -7,12 +7,14 @@ import { PrenotaComponent } from './prenotazioni/prenota/prenota.component';
 import { CalendarioComponent } from './admin/calendario/calendario.component';
 import { NewsletterComponent } from './admin/newsletter/newsletter.component';
 import { HomeComponent } from './home/home.component';
+import { ProfileComponent } from './profilo/profilo.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'profilo', component: ProfileComponent,canActivate: [authGuard] },
   { 
     path: 'prenota', 
     component: PrenotaComponent,

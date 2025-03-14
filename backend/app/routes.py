@@ -1,8 +1,9 @@
 from flask import jsonify, request
-from .models import db, User
+from .models import db, User, RuoloEnum  # Assicurati che RuoloEnum sia importato
 from werkzeug.security import generate_password_hash
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token
 from datetime import timedelta
+import os
 import re
 
 def init_routes(app):
@@ -25,7 +26,8 @@ def init_routes(app):
             new_user = User(
                 email=data['email'],
                 nome=data.get('nome', ''),
-                cognome=data.get('cognome', '')
+                cognome=data.get('cognome', ''),
+                ruolo=RuoloEnum.cliente  # Di default è cliente
             )
             new_user.set_password(data['password'])
             db.session.add(new_user)
@@ -47,6 +49,29 @@ def init_routes(app):
         if not user or not user.check_password(data['password']):
             return jsonify({"message": "Credenziali non valide"}), 401
 
+        # Imposta le credenziali admin dai parametri d'ambiente o di default
+        admin_email = os.getenv('ADMIN_EMAIL', 'Gabrielcuter27@gmail.com')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'Gabicu27')
+
+        print("Admin email:", admin_email)
+        print("Admin password:", admin_password)
+        print("Input email:", data['email'])
+        print("Input password:", data['password'])
+
+        # Se l'utente è admin, aggiorna il ruolo
+        if data['email'] == admin_email and data['password'] == admin_password:
+            user.ruolo = RuoloEnum.admin
+            print("Ruolo impostato a admin")
+        else:
+            user.ruolo = RuoloEnum.cliente
+            print("Ruolo impostato a cliente")
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"message": f"Errore di aggiornamento ruolo: {str(e)}"}), 500
+
         access_token = create_access_token(identity=user.id, expires_delta=timedelta(days=1))
         return jsonify({
             "message": "Login riuscito",
@@ -55,22 +80,7 @@ def init_routes(app):
                 "nome": user.nome,
                 "cognome": user.cognome,
                 "ruolo": user.ruolo.value,
-                "email": user.email
+                "email": user.email,
+                "creato_il": user.creato_il.isoformat()
             }
-        }), 200
-
-    @app.route('/api/profilo', methods=['GET'])
-    @jwt_required()
-    def get_profile():
-        user_id = get_jwt_identity()
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({"message": "Utente non trovato"}), 404
-
-        return jsonify({
-            "id": user.id,
-            "email": user.email,
-            "nome": user.nome,
-            "cognome": user.cognome,
-            "ruolo": user.ruolo.value
         }), 200

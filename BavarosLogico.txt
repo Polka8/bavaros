@@ -1,5 +1,5 @@
 
-utente(id_utente(PK), nome, psw, email, ruolo)
+utente(id_utente(PK), nome, psw, email, ruolo,creato_il)
 prenotazione(id_prenotazione(PK),data_prenotata,stato,id_utente,data_annullamento,data_creazione,note_aggiuntive,numero_posti) 
 piatto(id_piatto(PK), nome, prezzo, descrizione)  
 dettagli_prenotazione(id_dettaglio(PK),fk_prenotazione,fk_piatto,quantità)

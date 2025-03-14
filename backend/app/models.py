@@ -1,6 +1,7 @@
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 import enum
+from datetime import datetime
 
 class RuoloEnum(enum.Enum):
     admin = "admin"
@@ -14,6 +15,7 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column('psw', db.String(200), nullable=False)
     ruolo = db.Column(db.Enum(RuoloEnum), nullable=False, default=RuoloEnum.cliente)
+    creato_il = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
