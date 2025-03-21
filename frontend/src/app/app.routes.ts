@@ -6,15 +6,17 @@ import { RegisterComponent } from './auth/register/register.component';
 import { PrenotaComponent } from './prenotazioni/prenota/prenota.component';
 import { CalendarioComponent } from './admin/calendario/calendario.component';
 import { NewsletterComponent } from './admin/newsletter/newsletter.component';
+import { GestioneMenuComponent } from './admin/gestione-menu//gestione-menu.component';
 import { HomeComponent } from './home/home.component';
 import { ProfileComponent } from './profilo/profilo.component';
+
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: 'profilo', component: ProfileComponent,canActivate: [authGuard] },
+  { path: 'profilo', component: ProfileComponent, canActivate: [authGuard] },
   { 
     path: 'prenota', 
     component: PrenotaComponent,
@@ -25,7 +27,8 @@ export const routes: Routes = [
     canActivate: [adminGuard],
     children: [
       { path: 'calendario', component: CalendarioComponent },
-      { path: 'newsletter', component: NewsletterComponent }
+      { path: 'newsletter', component: NewsletterComponent },
+      { path: 'gestione-menu', component: GestioneMenuComponent}
     ]
   }
 ];
