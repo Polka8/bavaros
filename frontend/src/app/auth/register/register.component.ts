@@ -116,35 +116,36 @@ export class RegisterComponent {
     }
   }
 
-onSubmit() {
-  if (this.registerForm.valid) {
-    this.loading = true;
-    const formValues = this.registerForm.getRawValue();
-
-    this.authService.register({
-      nome: formValues.nome!,
-      cognome: formValues.cognome!,
-      email: formValues.email!,
-      password: formValues.password!
-    }).subscribe({
-      next: () => {
-        this.successMessage = 'Registrazione completata!';
-        this.errorMessage.set('');
-        setTimeout(() => this.router.navigate(['/login']), 2000);
-      },
-      error: (err) => {
-        this.errorMessage.set(err.message || 'Errore durante la registrazione');
-        this.successMessage = '';
-        
-       
-        setTimeout(() => {
+  onSubmit() {
+    if (this.registerForm.valid) {
+      this.loading = true;
+      const formValues = this.registerForm.getRawValue();
+  
+      this.authService.register({
+        nome: formValues.nome,
+        cognome: formValues.cognome,
+        email: formValues.email,
+        password: formValues.password
+      }).subscribe({
+        next: () => {
+          this.successMessage = 'Registrazione completata!';
+          this.errorMessage.set('');
+          setTimeout(() => this.router.navigate(['/login']), 2000);
+        },
+        error: (err) => {
+          // Se il backend restituisce error.error.message, lo visualizziamo
+          const msg = err.error && err.error.message ? err.error.message : 'Errore durante la registrazione';
+          this.errorMessage.set(msg);
+          this.successMessage = '';
+          setTimeout(() => {
+            this.loading = false;
+          }, 1500);
+        },
+        complete: () => {
           this.loading = false;
-        }, 1500); 
-      },
-      complete: () => {
-        this.loading = false; 
-      }
-    });
+        }
+      });
+    }
   }
-}
+  
 }

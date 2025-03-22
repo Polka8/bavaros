@@ -23,20 +23,20 @@ import { AuthService } from '../../shared/services/auth.service';
       <mat-form-field>
         <mat-label>Email</mat-label>
         <input matInput formControlName="email" type="email">
-        @if (loginForm.get('email')?.hasError('required')) {
-          <mat-error>Campo obbligatorio</mat-error>
-        }
-        @if (loginForm.get('email')?.hasError('email')) {
-          <mat-error>Formato email non valido</mat-error>
-        }
+        <mat-error *ngIf="loginForm.get('email')?.hasError('required')">
+          Campo obbligatorio
+        </mat-error>
+        <mat-error *ngIf="loginForm.get('email')?.hasError('email')">
+          Formato email non valido
+</mat-error>
       </mat-form-field>
 
       <mat-form-field>
         <mat-label>Password</mat-label>
         <input matInput formControlName="password" type="password">
-        @if (loginForm.get('password')?.hasError('required')) {
-          <mat-error>Campo obbligatorio</mat-error>
-        }
+        <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
+          Campo obbligatorio
+        </mat-error>
       </mat-form-field>
 
       <button 
@@ -76,7 +76,7 @@ export class LoginComponent {
     if (this.loginForm.valid) {
       this.loading = true;
       const formValues = this.loginForm.getRawValue();
-
+  
       this.authService.login({
         email: formValues.email!,
         password: formValues.password!
@@ -87,7 +87,8 @@ export class LoginComponent {
           this.router.navigate([redirectUrl]);
         },
         error: (err) => {
-          this.errorMessage.set(err.message || 'Credenziali non valide');
+          const msg = err.error && err.error.message ? err.error.message : 'Credenziali non valide';
+          this.errorMessage.set(msg);
           setTimeout(() => {
             this.loading = false;
           }, 1500);
@@ -98,4 +99,5 @@ export class LoginComponent {
       });
     }
   }
+  
 }

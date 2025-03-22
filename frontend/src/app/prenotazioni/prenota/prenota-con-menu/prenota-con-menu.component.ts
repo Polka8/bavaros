@@ -1,56 +1,65 @@
-import { Component } from '@angular/core';
+// prenota-con-menu.component.ts
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PrenotazioniService } from '../../../shared/services/prenotazioni.service';
 import { MenuService } from '../../../shared/services/menu.service';
+import { HttpHeaders } from '@angular/common/http';
 
 @Component({
   selector: 'app-prenota-con-menu',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <h3>Seleziona i Piatti dal Menù</h3>
-    <div *ngFor="let piatto of menu">
-      <p>{{ piatto.nome }} - {{ piatto.prezzo | currency }}</p>
-      <label>Quantità:</label>
-      <input type="number" [(ngModel)]="piatto.quantita" name="quantita{{piatto.id}}" min="0" />
+    <h3>Seleziona un Menu Admin</h3>
+    <select [(ngModel)]="selectedMenuId" (change)="loadSelectedMenu()" name="selectedMenuId">
+      <option value="" disabled selected>-- Seleziona un menù --</option>
+      <option *ngFor="let menu of savedMenus" [value]="menu.id_menu">{{ menu.titolo }}</option>
+    </select>
+
+    <div *ngIf="selectedMenu">
+      <h4>Menu Selezionato: {{ selectedMenu.titolo }}</h4>
+      <div *ngFor="let sezione of selectedMenu.sezioni">
+        <strong>{{ sezione.nome_sezione }}</strong>
+        <div *ngFor="let piatto of sezione.piatti">
+          {{ piatto.nome }} - {{ piatto.prezzo | currency }}
+          <label>Quantità:</label>
+          <input type="number" [(ngModel)]="piatto.quantita" min="1" required />
+        </div>
+      </div>
     </div>
+
     <hr />
+
     <form (ngSubmit)="effettuaPrenotazione()">
+      <label>Data Prenotata:</label>
+      <input type="datetime-local" [(ngModel)]="dataPrenotata" name="dataPrenotata" required />
+      
       <label>Numero Posti:</label>
-      <input type="number" [(ngModel)]="numeroPosti" name="numeroPosti" required />
+      <input type="number" [(ngModel)]="numeroPosti" name="numeroPosti" required min="1" />
       
       <label>Note aggiuntive:</label>
       <textarea [(ngModel)]="note" name="note"></textarea>
       
       <button type="submit">Prenota con Menu</button>
+      <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
     </form>
   `,
   styles: [`
-    div { margin-bottom: 10px; }
-    form {
-      max-width: 400px;
-      margin: 20px auto;
-      display: flex;
-      flex-direction: column;
-    }
-    label {
-      margin-top: 10px;
-    }
-    input, textarea {
-      padding: 5px;
-      margin-top: 5px;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px;
-    }
+    .error { color: red; margin-top: 10px; }
+    select { margin-bottom: 20px; padding: 5px; }
+    input, textarea { margin-bottom: 10px; }
   `]
 })
-export class PrenotaConMenuComponent {
-  menu: any[] = []; // Sarà caricato dal MenuService
+export class PrenotaConMenuComponent implements OnInit {
+  savedMenus: any[] = [];
+  selectedMenuId: number | null = null;
+  selectedMenu: any = null;
+
+  dataPrenotata: string = '';
   numeroPosti: number = 1;
   note: string = '';
+  errorMessage: string = '';
 
   constructor(
     private menuService: MenuService,
@@ -58,31 +67,93 @@ export class PrenotaConMenuComponent {
   ) {}
 
   ngOnInit(): void {
-    this.caricaMenu();
+    this.loadSavedMenus();
   }
 
-  caricaMenu(): void {
-    this.menuService.getMenu().subscribe(
-      data => {
-        // Assumi che ogni piatto non abbia quantità iniziale
-        this.menu = data.map(piatto => ({ ...piatto, quantita: 0 }));
-      },
-      error => console.error('Errore nel caricamento del menù', error)
-    );
+  // Carica i menù creati dall'admin
+  loadSavedMenus(): void {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+    this.menuService.getSavedMenus().subscribe({
+      next: data => this.savedMenus = data,
+      error: err => {
+        console.error('Errore nel caricamento dei menù salvati', err);
+        this.errorMessage = 'Errore nel caricamento dei menù';
+      }
+    });
+  }
+
+  // Quando l'utente seleziona un menù, lo carica per la prenotazione
+  loadSelectedMenu(): void {
+    if (!this.selectedMenuId) {
+      this.selectedMenu = null;
+      return;
+    }
+    // Trova il menù dalla lista già caricata
+    this.selectedMenu = this.savedMenus.find(menu => menu.id_menu === Number(this.selectedMenuId));
+    // Inizializza le quantità (minimo 1)
+    if (this.selectedMenu && this.selectedMenu.sezioni) {
+      this.selectedMenu.sezioni.forEach((sezione: any) => {
+        sezione.piatti.forEach((piatto: any) => {
+          // Se non esiste già, imposta la quantità a 1
+          if (!piatto.quantita) {
+            piatto.quantita = 1;
+          }
+        });
+      });
+    }
   }
 
   effettuaPrenotazione(): void {
-    // Filtra i piatti scelti (quantità > 0)
-    const piattiSelezionati = this.menu.filter(p => p.quantita > 0);
+    // Validazione data: non può essere antecedente a oggi
+    const prenotazioneDate = new Date(this.dataPrenotata);
+    const today = new Date();
+    if (prenotazioneDate < today) {
+      this.errorMessage = 'La data prenotata non può essere antecedente ad oggi';
+      return;
+    }
+    // Validazione posti
+    if (this.numeroPosti < 1) {
+      this.errorMessage = 'Il numero di posti deve essere almeno 1';
+      return;
+    }
+    // Costruisci l'oggetto prenotazione con i piatti del menù selezionato
+    if (!this.selectedMenu || !this.selectedMenu.sezioni) {
+      this.errorMessage = 'Nessun menù selezionato';
+      return;
+    }
+    const piattiPrenotati: { fk_piatto: number; quantita: number }[] = [];
+    this.selectedMenu.sezioni.forEach((sezione: any) => {
+      sezione.piatti.forEach((piatto: any) => {
+        if (Number(piatto.quantita) >= 1) {
+          piattiPrenotati.push({ fk_piatto: piatto.id_piatto, quantita: Number(piatto.quantita) });
+        }
+      });
+    });
+    if (piattiPrenotati.length === 0) {
+      this.errorMessage = 'Seleziona almeno un piatto con quantità valida';
+      return;
+    }
+  
     const prenotazione = {
+      data_prenotata: this.dataPrenotata,
       numero_posti: this.numeroPosti,
       note_aggiuntive: this.note,
-      piatti: piattiSelezionati
+      piatti: piattiPrenotati
     };
 
-    this.prenotazioniService.effettuaPrenotazioneConMenu(prenotazione).subscribe(
-      response => console.log('Prenotazione con menu effettuata', response),
-      error => console.error('Errore nella prenotazione con menu', error)
-    );
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+    this.prenotazioniService.effettuaPrenotazioneConMenu(prenotazione, headers).subscribe({
+      next: response => {
+        console.log('Prenotazione con menu effettuata', response);
+        this.errorMessage = '';
+      },
+      error: err => {
+        console.error('Errore nella prenotazione con menu', err);
+        this.errorMessage = err.error.message || 'Errore durante la prenotazione con menu';
+      }
+    });
   }
 }

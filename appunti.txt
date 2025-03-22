@@ -7,7 +7,6 @@ In fondo alla pagina ci sono o contatti e le informazioni del ristorante(indiriz
 Se effettuo il login come cliente,potrò prenotare solo i posti oppure il menù con i posti e vedere il mio storico delle prenotazioni(una pagina in cui saranno riportare le singole prenotazioni attive e scadute con l'ora specificata e la possibilità di annullare quelle attive)
 Se effettuo il login come admin(proprietario)potrò vedere lo storico delle prenotazioni sotto forma di calendario, vedendo le prenotazioni passate e future,attive e scadute in un calendario che copre mensilità,giorno,settimana
 Come admin,avrò anche la possibilità di vedere, sotto forma di newsletter( posta come icona aggiuntiva nel menu laterale)tutte le prenotazioni che sono state annullate.
-Inoltre,come admin ci sarà nella stessa barra laterale l'icona che mi permetterà di accedere alla pagina per vedere le risorse disponibili.
 Come admin posso anche modificare il  menu 
 Pieno controllo dei dati dell'admin(modifica la prenotazione o annulla) 
       
@@ -20,7 +19,6 @@ struttura progetto:
    |-/admin
     |-/calendario
     |-/gestione-menu
-    |-/gestione-risorse
     |-/newsletter
    |-/auth
     |-/login

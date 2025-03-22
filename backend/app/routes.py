@@ -119,66 +119,108 @@ def init_routes(app):
 
     # --- Endpoint per prenotazioni ---
 
+    # Endpoint per prenotazioni "solo posti"
     @app.route('/api/prenotazioni', methods=['POST'])
     @jwt_required()
     def crea_prenotazione():
-        user_id = get_jwt_identity()
-        data = request.get_json()
-        if not data or 'data_prenotata' not in data or 'numero_posti' not in data:
-            return jsonify({"message": "Dati mancanti per la prenotazione"}), 400
-        try:
-            nuova_prenotazione = Prenotazione(
-                data_prenotata=datetime.fromisoformat(data['data_prenotata']),
-                stato="attiva",
-                id_utente=user_id,
-                data_creazione=datetime.utcnow(),
-                note_aggiuntive=data.get('note_aggiuntive', ''),
-                numero_posti=data['numero_posti']
-            )
-            db.session.add(nuova_prenotazione)
-            db.session.commit()
-            return jsonify({
-                "message": "Prenotazione creata",
-                "prenotazione_id": nuova_prenotazione.id_prenotazione
-            }), 201
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"Errore server: {str(e)}"}), 500
+            user_id = get_jwt_identity()
+            data = request.get_json()
+            if not data:
+                return jsonify({"message": "Nessun dato inviato"}), 400
+            # Validazione data
+            try:
+                data_prenotata = datetime.fromisoformat(data['data_prenotata'])
+                if data_prenotata.date() < datetime.utcnow().date():
+                    return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
+            except Exception:
+                return jsonify({"message": "Formato data non valido"}), 400
+            # Validazione numero di posti
+            try:
+                num_posti = int(data.get('numero_posti', 0))
+                if num_posti < 1:
+                    return jsonify({"message": "Il numero di posti deve essere almeno 1"}), 400
+            except Exception:
+                return jsonify({"message": "Numero di posti non valido"}), 400
+
+            try:
+                nuova_prenotazione = Prenotazione(
+                    data_prenotata=data_prenotata,
+                    stato="attiva",
+                    id_utente=user_id,
+                    data_creazione=datetime.utcnow(),
+                    note_aggiuntive=data.get('note_aggiuntive', ''),
+                    numero_posti=num_posti
+                )
+                db.session.add(nuova_prenotazione)
+                db.session.commit()
+                return jsonify({
+                    "message": "Prenotazione creata con successo",
+                    "prenotazione_id": nuova_prenotazione.id_prenotazione
+                }), 201
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"message": f"Errore server: {str(e)}"}), 500
 
     @app.route('/api/prenotazioni/menu', methods=['POST'])
     @jwt_required()
     def crea_prenotazione_con_menu():
-        user_id = get_jwt_identity()
-        data = request.get_json()
-        if not data or 'data_prenotata' not in data or 'numero_posti' not in data or 'piatti' not in data:
-            return jsonify({"message": "Dati mancanti per la prenotazione con menu"}), 400
-        try:
-            prenotazione = Prenotazione(
-                data_prenotata=datetime.fromisoformat(data['data_prenotata']),
-                stato="attiva",
-                id_utente=user_id,
-                data_creazione=datetime.utcnow(),
-                note_aggiuntive=data.get('note_aggiuntive', ''),
-                numero_posti=data['numero_posti']
-            )
-            db.session.add(prenotazione)
-            db.session.flush()  # Per ottenere l'id della prenotazione
-
+            user_id = get_jwt_identity()
+            data = request.get_json()
+            if not data:
+                return jsonify({"message": "Nessun dato inviato"}), 400
+            # Validazione data
+            try:
+                data_prenotata = datetime.fromisoformat(data['data_prenotata'])
+                if data_prenotata.date() < datetime.utcnow().date():
+                    return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
+            except Exception:
+                return jsonify({"message": "Formato data non valido"}), 400
+            # Validazione numero di posti
+            try:
+                num_posti = int(data.get('numero_posti', 0))
+                if num_posti < 1:
+                    return jsonify({"message": "Il numero di posti deve essere almeno 1"}), 400
+            except Exception:
+                return jsonify({"message": "Numero di posti non valido"}), 400
+            # Validazione piatti
+            if 'piatti' not in data or not isinstance(data['piatti'], list) or len(data['piatti']) == 0:
+                return jsonify({"message": "Nessun piatto selezionato"}), 400
             for item in data['piatti']:
-                dettaglio = DettagliPrenotazione(
-                    fk_prenotazione=prenotazione.id_prenotazione,
-                    fk_piatto=item['fk_piatto'],
-                    quantita=item['quantita']
+                try:
+                    if int(item.get('quantita', 0)) < 1:
+                        return jsonify({"message": "La quantità per ogni piatto deve essere almeno 1"}), 400
+                except Exception:
+                    return jsonify({"message": "Quantità non valida per un piatto"}), 400
+
+            try:
+                prenotazione = Prenotazione(
+                    data_prenotata=data_prenotata,
+                    stato="attiva",
+                    id_utente=user_id,
+                    data_creazione=datetime.utcnow(),
+                    note_aggiuntive=data.get('note_aggiuntive', ''),
+                    numero_posti=num_posti
                 )
-                db.session.add(dettaglio)
-            db.session.commit()
-            return jsonify({
-                "message": "Prenotazione con menu creata",
-                "prenotazione_id": prenotazione.id_prenotazione
-            }), 201
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"Errore server: {str(e)}"}), 500
+                db.session.add(prenotazione)
+                db.session.flush()  # Per ottenere l'id della prenotazione
+
+                for item in data['piatti']:
+                    dettaglio = DettagliPrenotazione(
+                        fk_prenotazione=prenotazione.id_prenotazione,
+                        fk_piatto=item['fk_piatto'],
+                        quantita=int(item['quantita'])
+                    )
+                    db.session.add(dettaglio)
+                db.session.commit()
+                return jsonify({
+                    "message": "Prenotazione con menu creata con successo",
+                    "prenotazione_id": prenotazione.id_prenotazione
+                }), 201
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"message": f"Errore server: {str(e)}"}), 500
+
+
 
     @app.route('/api/prenotazioni/storico/<int:user_id>', methods=['GET'])
     @jwt_required()

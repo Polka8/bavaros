@@ -1,5 +1,6 @@
+// prenotazioni.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environment/environment.component';
 
@@ -11,15 +12,13 @@ export class PrenotazioniService {
 
   constructor(private http: HttpClient) {}
 
-  // Prenotazione "solo posti"
-  effettuaPrenotazione(prenotazione: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/prenotazioni`, prenotazione);
+  effettuaPrenotazione(prenotazione: any, headers?: HttpHeaders): Observable<any> {
+    return this.http.post(`${this.apiUrl}/prenotazioni`, prenotazione, { headers });
   }
 
-  // Prenotazione con menu (inserisce prenotazione e dettagli prenotazione)
-  effettuaPrenotazioneConMenu(prenotazione: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/prenotazioni/menu`, prenotazione);
+  effettuaPrenotazioneConMenu(prenotazione: any, headers?: HttpHeaders): Observable<any> {
+    return this.http.post(`${this.apiUrl}/prenotazioni/menu`, prenotazione, { headers });
   }
   
-  // Altri metodi per recuperare storico, annullare prenotazioni, ecc.
+  // Altri metodi...
 }
