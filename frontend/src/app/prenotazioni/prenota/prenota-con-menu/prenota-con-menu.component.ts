@@ -145,7 +145,7 @@ export class PrenotaConMenuComponent implements OnInit {
     const token = localStorage.getItem('token');
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
 
-    this.prenotazioniService.effettuaPrenotazioneConMenu(prenotazione, headers).subscribe({
+    this.prenotazioniService.effettuaPrenotazioneConMenu(prenotazione).subscribe({
       next: response => {
         console.log('Prenotazione con menu effettuata', response);
         this.errorMessage = '';

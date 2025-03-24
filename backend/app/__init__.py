@@ -11,9 +11,12 @@ jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, resources={r"/api/*": {"origins": "http://localhost:4200"}})
-    
-    # Configurazione del database
+        # Aggiungi i metodi DELETE e OPTIONS alla configurazione CORS
+    CORS(app, resources={r"/api/*": {
+        "origins": "http://localhost:4200",
+        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+        "allow_headers": ["Authorization", "Content-Type"]
+    }})    # Configurazione del database
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
         "DATABASE_URL", 
         "mysql+pymysql://root:password123@db/bavaros?charset=utf8mb4"

@@ -9,16 +9,39 @@ import { environment } from '../../environment/environment.component';
 })
 export class PrenotazioniService {
   private apiUrl = environment.apiUrl;  // ad esempio: http://localhost:3000/api
-
+  
   constructor(private http: HttpClient) {}
+  
+  // Funzione per creare gli headers con il token
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token') || '';
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+  }
 
-  effettuaPrenotazione(prenotazione: any, headers?: HttpHeaders): Observable<any> {
+  // Prenotazione "solo posti"
+  effettuaPrenotazione(prenotazione: any): Observable<any> {
+    const headers = this.getAuthHeaders();
     return this.http.post(`${this.apiUrl}/prenotazioni`, prenotazione, { headers });
   }
 
-  effettuaPrenotazioneConMenu(prenotazione: any, headers?: HttpHeaders): Observable<any> {
+  // Prenotazione con menu
+  effettuaPrenotazioneConMenu(prenotazione: any): Observable<any> {
+    const headers = this.getAuthHeaders();
     return this.http.post(`${this.apiUrl}/prenotazioni/menu`, prenotazione, { headers });
   }
-  
-  // Altri metodi...
+
+  // Recupera lo storico delle prenotazioni dell'utente
+  getPrenotazioniStorico(userId: number): Observable<any[]> {
+    const headers = this.getAuthHeaders();
+    return this.http.get<any[]>(`${this.apiUrl}/prenotazioni/storico/${userId}`, { headers });
+  }
+
+  // (Opzionale) Cancella una prenotazione attiva (devi aver implementato l'endpoint nel backend)
+  cancelPrenotazione(prenotazioneId: number): Observable<any> {
+    const headers = this.getAuthHeaders();
+    return this.http.delete(`${this.apiUrl}/prenotazioni/${prenotazioneId}`, { headers });
+  }
 }

@@ -39,6 +39,7 @@ def init_routes(app):
                 "message": "Registrazione completata",
                 "token": access_token,
                 "user": {
+                    "id": new_user.id,
                     "nome": new_user.nome,
                     "cognome": new_user.cognome,
                     "email": new_user.email,
@@ -91,6 +92,7 @@ def init_routes(app):
             "message": "Login riuscito",
             "token": access_token,
             "user": {
+                "id": user.id,
                 "nome": user.nome,
                 "cognome": user.cognome,
                 "ruolo": user.ruolo.value,
@@ -432,4 +434,34 @@ def init_routes(app):
             db.session.rollback()
             return jsonify({"message": f"Errore nell'eliminazione del menù: {str(e)}"}), 500
 
+    @app.route('/api/prenotazioni/<int:prenotazione_id>', methods=['DELETE', 'OPTIONS'])
+    @jwt_required()
+    def annulla_prenotazione(prenotazione_id):
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'DELETE, GET, POST, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
 
+        user_id = int(get_jwt_identity())  # Converti in intero
+        prenotazione = Prenotazione.query.get(prenotazione_id)
+        
+        if not prenotazione:
+            return jsonify({"message": "Prenotazione non trovata"}), 404
+        
+        # Controllo: il proprietario o admin possono annullare
+        if prenotazione.id_utente != user_id and User.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Non autorizzato"}), 403
+        
+        try:
+            prenotazione.stato = "annullata"
+            prenotazione.data_annullamento = datetime.utcnow()
+            db.session.commit()
+            
+            response = jsonify({"message": "Prenotazione annullata"})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            return response, 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"message": f"Errore: {str(e)}"}), 500
