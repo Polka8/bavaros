@@ -58,3 +58,9 @@ git push -u origin main
 
 
  / <ng-container *ngIf="user.role === 'admin'">
+
+ barra multifunzione ovunque preferibile
+ filtro funzionante
+ migliora homepage
+ migliora stile
+ dopo la prenotazione reindirizzamento profilo

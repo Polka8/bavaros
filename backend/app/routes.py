@@ -1,5 +1,5 @@
 from flask import jsonify, request
-from .models import db, User, RuoloEnum, Prenotazione, DettagliPrenotazione, Piatto, Menu, MenuSezione, MenuSezioneRel, MenuItem
+from .models import Notifica, db, User, RuoloEnum, Prenotazione, DettagliPrenotazione, Piatto, Menu, MenuSezione, MenuSezioneRel, MenuItem
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta, datetime
 import os
@@ -126,6 +126,7 @@ def init_routes(app):
     @jwt_required()
     def crea_prenotazione():
             user_id = get_jwt_identity()
+            user = User.query.get(user_id)
             data = request.get_json()
             if not data:
                 return jsonify({"message": "Nessun dato inviato"}), 400
@@ -155,6 +156,13 @@ def init_routes(app):
                 )
                 db.session.add(nuova_prenotazione)
                 db.session.commit()
+                notifica = Notifica(
+                    tipo="nuova_prenotazione",
+                    messaggio=f"Nuova prenotazione da {user.nome} {user.cognome} per {num_posti} posti il {data_prenotata}",
+                    id_prenotazione=nuova_prenotazione.id_prenotazione
+                )
+                db.session.add(notifica)
+                db.session.commit()
                 return jsonify({
                     "message": "Prenotazione creata con successo",
                     "prenotazione_id": nuova_prenotazione.id_prenotazione
@@ -166,61 +174,79 @@ def init_routes(app):
     @app.route('/api/prenotazioni/menu', methods=['POST'])
     @jwt_required()
     def crea_prenotazione_con_menu():
-            user_id = get_jwt_identity()
-            data = request.get_json()
-            if not data:
-                return jsonify({"message": "Nessun dato inviato"}), 400
-            # Validazione data
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"message": "Nessun dato inviato"}), 400
+        
+        # Validazione data
+        try:
+            data_prenotata = datetime.fromisoformat(data['data_prenotata'])
+            if data_prenotata.date() < datetime.utcnow().date():
+                return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
+        except Exception:
+            return jsonify({"message": "Formato data non valido"}), 400
+        
+        # Validazione numero di posti
+        try:
+            num_posti = int(data.get('numero_posti', 0))
+            if num_posti < 1:
+                return jsonify({"message": "Il numero di posti deve essere almeno 1"}), 400
+        except Exception:
+            return jsonify({"message": "Numero di posti non valido"}), 400
+        
+        # Validazione piatti
+        if 'piatti' not in data or not isinstance(data['piatti'], list) or len(data['piatti']) == 0:
+            return jsonify({"message": "Nessun piatto selezionato"}), 400
+        
+        for item in data['piatti']:
             try:
-                data_prenotata = datetime.fromisoformat(data['data_prenotata'])
-                if data_prenotata.date() < datetime.utcnow().date():
-                    return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
+                if int(item.get('quantita', 0)) < 1:
+                    return jsonify({"message": "La quantità per ogni piatto deve essere almeno 1"}), 400
             except Exception:
-                return jsonify({"message": "Formato data non valido"}), 400
-            # Validazione numero di posti
-            try:
-                num_posti = int(data.get('numero_posti', 0))
-                if num_posti < 1:
-                    return jsonify({"message": "Il numero di posti deve essere almeno 1"}), 400
-            except Exception:
-                return jsonify({"message": "Numero di posti non valido"}), 400
-            # Validazione piatti
-            if 'piatti' not in data or not isinstance(data['piatti'], list) or len(data['piatti']) == 0:
-                return jsonify({"message": "Nessun piatto selezionato"}), 400
+                return jsonify({"message": "Quantità non valida per un piatto"}), 400
+        
+        # Creazione prenotazione e dettagli
+        try:
+            prenotazione = Prenotazione(
+                data_prenotata=data_prenotata,
+                stato="attiva",
+                id_utente=user_id,
+                data_creazione=datetime.utcnow(),
+                note_aggiuntive=data.get('note_aggiuntive', ''),
+                numero_posti=num_posti
+            )
+            db.session.add(prenotazione)
+            db.session.flush()  # Ottieni l'id_prenotazione
+            
+            # Aggiungi dettagli piatti
             for item in data['piatti']:
-                try:
-                    if int(item.get('quantita', 0)) < 1:
-                        return jsonify({"message": "La quantità per ogni piatto deve essere almeno 1"}), 400
-                except Exception:
-                    return jsonify({"message": "Quantità non valida per un piatto"}), 400
-
-            try:
-                prenotazione = Prenotazione(
-                    data_prenotata=data_prenotata,
-                    stato="attiva",
-                    id_utente=user_id,
-                    data_creazione=datetime.utcnow(),
-                    note_aggiuntive=data.get('note_aggiuntive', ''),
-                    numero_posti=num_posti
+                dettaglio = DettagliPrenotazione(
+                    fk_prenotazione=prenotazione.id_prenotazione,
+                    fk_piatto=item['fk_piatto'],
+                    quantita=int(item['quantita'])
                 )
-                db.session.add(prenotazione)
-                db.session.flush()  # Per ottenere l'id della prenotazione
-
-                for item in data['piatti']:
-                    dettaglio = DettagliPrenotazione(
-                        fk_prenotazione=prenotazione.id_prenotazione,
-                        fk_piatto=item['fk_piatto'],
-                        quantita=int(item['quantita'])
-                    )
-                    db.session.add(dettaglio)
-                db.session.commit()
-                return jsonify({
-                    "message": "Prenotazione con menu creata con successo",
-                    "prenotazione_id": prenotazione.id_prenotazione
-                }), 201
-            except Exception as e:
-                db.session.rollback()
-                return jsonify({"message": f"Errore server: {str(e)}"}), 500
+                db.session.add(dettaglio)
+            
+            # Crea notifica
+            piatti_nomi = [Piatto.query.get(item['fk_piatto']).nome for item in data['piatti']]
+            notifica = Notifica(
+                tipo="nuova_prenotazione_con_menu",
+                messaggio=f"Nuova prenotazione con menù da {user.nome} {user.cognome} per {num_posti} posti il {data_prenotata}. Piatti: {', '.join(piatti_nomi)}",
+                id_prenotazione=prenotazione.id_prenotazione
+            )
+            db.session.add(notifica)
+            db.session.commit()
+            
+            return jsonify({
+                "message": "Prenotazione con menu creata con successo",
+                "prenotazione_id": prenotazione.id_prenotazione
+            }), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"message": f"Errore server: {str(e)}"}), 500
 
 
 
@@ -446,18 +472,25 @@ def init_routes(app):
 
         user_id = int(get_jwt_identity())  # Converti in intero
         prenotazione = Prenotazione.query.get(prenotazione_id)
-        
+        user = User.query.get(prenotazione.id_utente)
         if not prenotazione:
             return jsonify({"message": "Prenotazione non trovata"}), 404
         
         # Controllo: il proprietario o admin possono annullare
-        if prenotazione.id_utente != user_id and User.ruolo != RuoloEnum.admin:
+        if prenotazione.id_utente != user_id and user.ruolo != RuoloEnum.admin:
             return jsonify({"message": "Non autorizzato"}), 403
         
         try:
             prenotazione.stato = "annullata"
             prenotazione.data_annullamento = datetime.utcnow()
+            notifica = Notifica(
+                tipo="annullamento",
+                messaggio=f"Prenotazione di {user.nome} {user.cognome} per il {prenotazione.data_prenotata} annullata",
+                id_prenotazione=prenotazione.id_prenotazione
+            )
+            db.session.add(notifica)
             db.session.commit()
+            
             
             response = jsonify({"message": "Prenotazione annullata"})
             response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
@@ -465,3 +498,78 @@ def init_routes(app):
         except Exception as e:
             db.session.rollback()
             return jsonify({"message": f"Errore: {str(e)}"}), 500
+    @app.route('/api/notifiche', methods=['GET', 'OPTIONS'])
+    @jwt_required(optional=True)  # Permette OPTIONS senza autenticazione
+    def get_notifiche():
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Accesso negato"}), 403
+        letto = request.args.get('letto', None)
+        if letto is not None:
+            try:
+                letto = letto.lower() == 'true'  # Converte in booleano
+            except ValueError:
+                return jsonify({"message": "Parametro 'letto' non valido"}), 400
+
+        # Filtra le notifiche in base al parametro 'letto'
+        query = Notifica.query.order_by(Notifica.data_notifica.desc())
+        if letto is not None:
+         query = query.filter_by(letto=letto)
+
+        notifiche = query.all()
+        notifiche_data = []
+        for n in notifiche:
+            prenotazione = Prenotazione.query.get(n.id_prenotazione)
+            utente = User.query.get(prenotazione.id_utente) if prenotazione else None
+            dettagli = DettagliPrenotazione.query.filter_by(fk_prenotazione=n.id_prenotazione).all() if prenotazione else []
+
+            notifiche_data.append({
+                "id_notifica": n.id_notifica,
+                "tipo": n.tipo,
+                "messaggio": n.messaggio,
+                "data": n.data_notifica.isoformat(),
+                "letto": n.letto,
+                "dettagli_prenotazione": {
+                    "id": prenotazione.id_prenotazione,
+                    "data_prenotata": prenotazione.data_prenotata.isoformat(),
+                    "stato": prenotazione.stato,
+                    "utente": f"{utente.nome} {utente.cognome}" if utente else "Utente eliminato",
+                    "numero_posti": prenotazione.numero_posti,
+                    "piatti": [
+                        {"nome": Piatto.query.get(d.fk_piatto).nome, "quantita": d.quantita}
+                        for d in dettagli
+                    ] if dettagli else []
+                } if prenotazione else {}
+            })
+        return jsonify(notifiche_data), 200
+          
+    @app.route('/api/notifiche/<int:notifica_id>/letto', methods=['PUT', 'OPTIONS'])
+    @jwt_required()
+    def mark_notifica_as_read(notifica_id):
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)  # Correggi qui: 'User' → 'user'
+        if not user or user.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Accesso negato"}), 403
+
+        notifica = Notifica.query.get(notifica_id)
+        if not notifica:
+            return jsonify({"message": "Notifica non trovata"}), 404
+
+        notifica.letto = True
+        db.session.commit()
+        return jsonify({"message": "Notifica aggiornata"}), 200

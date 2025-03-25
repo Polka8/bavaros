@@ -77,3 +77,12 @@ class MenuItem(db.Model):
     id_item = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id_menu_sezione = db.Column(db.Integer, db.ForeignKey('menu_sezione_rel.id_menu_sezione'), nullable=False)
     id_piatto = db.Column(db.Integer, db.ForeignKey('piatto.id_piatto'), nullable=False)
+    
+class Notifica(db.Model):
+    __tablename__ = 'notifica'
+    id_notifica = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(50), nullable=False)  # "nuova_prenotazione" o "annullamento"
+    messaggio = db.Column(db.Text, nullable=False)
+    data_notifica = db.Column(db.DateTime, default=datetime.utcnow)
+    letto = db.Column(db.Boolean, default=False)
+    id_prenotazione = db.Column(db.Integer, db.ForeignKey('prenotazione.id_prenotazione'))

@@ -14,7 +14,7 @@ def create_app():
         # Aggiungi i metodi DELETE e OPTIONS alla configurazione CORS
     CORS(app, resources={r"/api/*": {
         "origins": "http://localhost:4200",
-        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Authorization", "Content-Type"]
     }})    # Configurazione del database
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
