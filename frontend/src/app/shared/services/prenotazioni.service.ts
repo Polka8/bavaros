@@ -1,6 +1,6 @@
 // prenotazioni.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environment/environment.component';
 
@@ -44,4 +44,21 @@ export class PrenotazioniService {
     const headers = this.getAuthHeaders();
     return this.http.delete(`${this.apiUrl}/prenotazioni/${prenotazioneId}`, { headers });
   }
+  // prenotazioni.service.ts
+  getPrenotazioniCalendario(
+    vista: 'mese' | 'settimana' | 'giorno',
+    anno?: number,
+    mese?: number,
+    giorno?: number
+  ): Observable<any[]> {
+    const headers = this.getAuthHeaders();
+    const params = new HttpParams()
+      .set('vista', vista)
+      .set('anno', anno?.toString() ?? '')
+      .set('mese', mese?.toString() ?? '')
+      .set('giorno', giorno?.toString() ?? '');
+
+    return this.http.get<any[]>(`${this.apiUrl}/prenotazioni/calendario`, { headers, params });
+  }
+
 }

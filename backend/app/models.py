@@ -29,6 +29,7 @@ class Prenotazione(db.Model):
     data_prenotata = db.Column(db.DateTime, nullable=False)
     stato = db.Column(db.String(50), nullable=False)
     id_utente = db.Column(db.Integer, db.ForeignKey('utente.id_utente'), nullable=False)
+    user = db.relationship('User', backref='prenotazioni')  # Aggiungi questa riga
     data_annullamento = db.Column(db.DateTime)
     data_creazione = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     note_aggiuntive = db.Column(db.Text)

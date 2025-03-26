@@ -266,28 +266,63 @@ def init_routes(app):
             })
         return jsonify(prenotazioni_data), 200
 
-    @app.route('/api/prenotazioni/calendario', methods=['GET'])
+    @app.route('/api/prenotazioni/calendario', methods=['GET', 'OPTIONS'])
     @jwt_required()
-    def prenotazioni_calendario():
+    def get_prenotazioni_calendario():
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         if not user or user.ruolo != RuoloEnum.admin:
             return jsonify({"message": "Accesso negato"}), 403
 
-        prenotazioni = Prenotazione.query.all()
-        prenotazioni_data = []
-        for p in prenotazioni:
-            prenotazioni_data.append({
-                "id_prenotazione": p.id_prenotazione,
-                "data_prenotata": p.data_prenotata.isoformat(),
-                "stato": p.stato,
-                "data_creazione": p.data_creazione.isoformat(),
-                "numero_posti": p.numero_posti,
-                "note_aggiuntive": p.note_aggiuntive
-            })
-        return jsonify(prenotazioni_data), 200
+        # Recupera i parametri di filtro
+        anno = request.args.get('anno', type=int)
+        mese = request.args.get('mese', type=int)
+        giorno = request.args.get('giorno', type=int)
+        vista = request.args.get('vista', 'mese')  # 'mese', 'settimana', 'giorno'
 
-    # --- Endpoint per la gestione dei menù ---
+        # Costruisci la query in base ai filtri
+        query = Prenotazione.query
+        if vista == 'mese' and anno and mese:
+            query = query.filter(
+                db.extract('year', Prenotazione.data_prenotata) == anno,
+                db.extract('month', Prenotazione.data_prenotata) == mese
+            )
+        elif vista == 'settimana' and anno and mese and giorno:
+            data_inizio = datetime(anno, mese, giorno)
+            data_fine = data_inizio + timedelta(days=7)
+            query = query.filter(Prenotazione.data_prenotata.between(data_inizio, data_fine))
+        elif vista == 'giorno' and anno and mese and giorno:
+            query = query.filter(
+                db.extract('year', Prenotazione.data_prenotata) == anno,
+                db.extract('month', Prenotazione.data_prenotata) == mese,
+                db.extract('day', Prenotazione.data_prenotata) == giorno
+            )
+
+        prenotazioni = query.all()
+        result = []
+
+        for p in prenotazioni:
+            utente = User.query.get(p.id_utente)  # Ottieni l'utente
+            result.append({
+                "id": p.id_prenotazione,
+                "data": p.data_prenotata.isoformat(),
+                "utente": f"{utente.nome} {utente.cognome}" if utente else "Utente eliminato",
+                "numero_posti": p.numero_posti,  # ✅ Aggiunto numero_posti
+                "stato": p.stato,               # ✅ Aggiunto stato
+                "note": p.note_aggiuntive
+            })
+
+        response = jsonify(result)
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')  # ✅ Aggiunto CORS
+        return response, 200
+        # --- Endpoint per la gestione dei menù ---
 
     # Ottieni la lista dei piatti disponibili (usato per il menù)
     @app.route('/api/menu', methods=['GET'])
