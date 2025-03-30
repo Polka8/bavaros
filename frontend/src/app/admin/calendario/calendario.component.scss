@@ -1,6 +1,232 @@
-.view-buttons {
-    margin-bottom: 20px;
+.calendar-container {
+  padding: 2rem;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  
+  .left-section {
+    h2 {
+      margin: 0 0 1rem 0;
+      color: #3f51b5;
+    }
   }
-  button {
-    margin-right: 10px;
+
+  .date-navigation {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    .current-date {
+      font-size: 1.2rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      background: #f5f5f5;
+      transition: background 0.2s;
+      
+      &:hover {
+        background: #e0e0e0;
+      }
+    }
+
+    button {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      
+      mat-icon {
+        color: #3f51b5;
+      }
+    }
   }
+
+  .right-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    .today-button {
+      background: #3f51b5;
+      color: white;
+    }
+
+    .view-selector {
+      button {
+        padding: 8px 16px;
+        border-radius: 4px;
+        
+        &.active {
+          background: #3f51b5;
+          color: white;
+        }
+      }
+    }
+  }
+}
+
+.month-view {
+  flex: 1;
+  overflow: auto;
+
+  .days-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 2px solid #eee;
+    padding: 1rem 0;
+
+    .day-header {
+      text-align: center;
+      font-weight: 500;
+      color: #666;
+      padding: 0.5rem;
+    }
+  }
+
+  .weeks-container {
+    display: grid;
+    grid-template-rows: repeat(6, 1fr);
+    gap: 1px;
+    background: #eee;
+  }
+
+  .week-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+  }
+
+  .day-cell {
+    min-height: 120px;
+    background: #fff;
+    padding: 8px;
+    position: relative;
+    
+    &:not(.current-month) {
+      background: #fafafa;
+      color: #999;
+    }
+
+    &.today {
+      background: #fff3e0;
+      font-weight: bold;
+    }
+
+    .day-number {
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .event-preview {
+      background: #e3f2fd;
+      border-left: 3px solid #2196f3;
+      padding: 4px;
+      margin: 2px 0;
+      font-size: 0.85rem;
+      border-radius: 2px;
+    }
+  }
+}
+
+.week-view {
+  .week-range-header {
+    padding: 1rem;
+    background: #f5f5f5;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: #eee;
+  }
+
+  .day-cell {
+    min-height: 150px;
+    background: #fff;
+    padding: 8px;
+
+    &.current-week {
+      background: #f0f8ff;
+    }
+
+    &.today {
+      background: #fff3e0;
+    }
+  }
+}
+
+.timeline-view {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  height: calc(100vh - 200px);
+  border: 1px solid #eee;
+
+  .time-column {
+    background: #fafafa;
+    padding: 8px;
+    border-right: 1px solid #eee;
+
+    .time-slot {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #666;
+    }
+  }
+
+  .events-column {
+    position: relative;
+
+    .time-slot {
+      height: 60px;
+      position: relative;
+      border-bottom: 1px solid #eee;
+
+      .hour-line {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        border-top: 1px solid #f5f5f5;
+      }
+    }
+
+    .event {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      background: #e3f2fd;
+      border-left: 3px solid #2196f3;
+      border-radius: 4px;
+      padding: 8px;
+
+      &-content {
+        .event-time {
+          font-size: 0.8rem;
+          color: #1976d2;
+        }
+
+        .event-title {
+          font-weight: 500;
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+}
