@@ -561,7 +561,32 @@ def init_routes(app):
                 } if prenotazione else {}
             })
         return jsonify(notifiche_data), 200
-          
+            
+    @app.route('/api/notifiche/mark-all-read', methods=['PUT', 'OPTIONS'])
+    @jwt_required()
+    def mark_all_notifiche_as_read():
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Accesso negato"}), 403
+
+        try:
+            notifiche = Notifica.query.filter_by(letto=False).all()
+            for notifica in notifiche:
+                notifica.letto = True
+            db.session.commit()
+            return jsonify({"message": "Tutte le notifiche sono state segnate come lette"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"message": f"Errore: {str(e)}"}), 500
+
     @app.route('/api/notifiche/<int:notifica_id>/letto', methods=['PUT', 'OPTIONS'])
     @jwt_required()
     def mark_notifica_as_read(notifica_id):

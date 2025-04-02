@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { PrenotazioniService } from '../../../shared/services/prenotazioni.service';
 import { MenuService } from '../../../shared/services/menu.service';
 import { HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-prenota-con-menu',
@@ -41,7 +42,12 @@ import { HttpHeaders } from '@angular/common/http';
       <label>Note aggiuntive:</label>
       <textarea [(ngModel)]="note" name="note"></textarea>
       
-      <button type="submit">Prenota con Menu</button>
+      <button type="submit"
+          [disabled]="isSubmitting"
+      [class.disabled]="isSubmitting">
+      {{ isSubmitting ? 'Prenotazione in corso...' : 'Prenota' }}
+      </button>
+      <div *ngIf="successMessage" class="success">{{ successMessage }}</div>
       <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
     </form>
   `,
@@ -49,9 +55,14 @@ import { HttpHeaders } from '@angular/common/http';
     .error { color: red; margin-top: 10px; }
     select { margin-bottom: 20px; padding: 5px; }
     input, textarea { margin-bottom: 10px; }
+    .disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
   `]
 })
 export class PrenotaConMenuComponent implements OnInit {
+  successMessage: string = '';
   savedMenus: any[] = [];
   selectedMenuId: number | null = null;
   selectedMenu: any = null;
@@ -60,10 +71,11 @@ export class PrenotaConMenuComponent implements OnInit {
   numeroPosti: number = 1;
   note: string = '';
   errorMessage: string = '';
-
+  isSubmitting: boolean = false;
   constructor(
     private menuService: MenuService,
-    private prenotazioniService: PrenotazioniService
+    private prenotazioniService: PrenotazioniService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -144,15 +156,23 @@ export class PrenotaConMenuComponent implements OnInit {
 
     const token = localStorage.getItem('token');
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
-
+    if (this.isSubmitting) return; // Blocca click multipli
+  
+    this.isSubmitting = true;
     this.prenotazioniService.effettuaPrenotazioneConMenu(prenotazione).subscribe({
       next: response => {
         console.log('Prenotazione con menu effettuata', response);
         this.errorMessage = '';
+        this.successMessage = 'Prenotazione effettuata con successo'; // Aggiungi
+        setTimeout(() => {
+          this.router.navigateByUrl('/profilo');
+          this.isSubmitting = false; 
+        }, 2000);
       },
       error: err => {
         console.error('Errore nella prenotazione con menu', err);
         this.errorMessage = err.error.message || 'Errore durante la prenotazione con menu';
+        this.isSubmitting = false;
       }
     });
   }

@@ -16,7 +16,6 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
       <p><strong>Cognome:</strong> {{ user.cognome }}</p>
       <p><strong>Email:</strong> {{ user.email }}</p>
       <p><strong>Data di registrazione:</strong> {{ user.creato_il | date:'medium' }}</p>
-
       <div class="sections-row">
         <div class="section-box" (click)="setSection('active')">
           <h3>Prenotazioni Attive</h3>
@@ -25,7 +24,6 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
           <h3>Tutte le Prenotazioni</h3>
         </div>
       </div>
-
       <div class="reservations-container" *ngIf="activeSection === 'active'">
         <h4>Prenotazioni Attive</h4>
         <div *ngFor="let prenotazione of prenotazioniAttive">
@@ -37,11 +35,20 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
           <button (click)="cancelReservation(prenotazione.id_prenotazione)">Annulla</button>
         </div>
       </div>
-
       <div class="reservations-container" *ngIf="activeSection === 'all'">
         <h4>Tutte le Prenotazioni</h4>
-        <!-- Filtro (puoi espanderlo come preferisci) -->
-        <input type="text" placeholder="Filtra per data o stato..." [(ngModel)]="filterText" (input)="applyFilter()" />
+        <!-- Filtro -->
+        <div class="filters">
+          <input type="date" [(ngModel)]="filterDate" (change)="applyFilter()" />
+          <div>
+            <label><input type="checkbox" [(ngModel)]="filterStatus.attiva" (change)="applyFilter()" /> Attiva</label>
+            <label><input type="checkbox" [(ngModel)]="filterStatus.annullata" (change)="applyFilter()" /> Annullata</label>
+          </div>
+          <select [(ngModel)]="sortOrder" (change)="applyFilter()">
+            <option value="recent">Più recenti</option>
+            <option value="oldest">Più vecchie</option>
+          </select>
+        </div>
         <div *ngFor="let prenotazione of filteredReservations">
           <p>
             <strong>ID:</strong> {{ prenotazione.id_prenotazione }} -
@@ -51,7 +58,6 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
         </div>
       </div>
     </div>
-
     <ng-template #loadingTemplate>
       <p>Caricamento dati in corso...</p>
     </ng-template>
@@ -62,7 +68,9 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
     .section-box { width: 200px; height: 100px; background-color: #eee; margin: 0 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; }
     .section-box:hover { background-color: #ddd; }
     .reservations-container { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
-    input { padding: 5px; margin-bottom: 10px; width: 100%; }
+    .filters { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    input[type="date"] { padding: 5px; }
+    select { padding: 5px; border-radius: 4px; }
   `]
 })
 export class ProfileComponent implements OnInit {
@@ -71,10 +79,11 @@ export class ProfileComponent implements OnInit {
   prenotazioniAttive: any[] = [];
   prenotazioniAll: any[] = [];
   filteredReservations: any[] = [];
-  filterText: string = '';
+  filterDate: string = '';
+  filterStatus = { attiva: true, annullata: true };
+  sortOrder: 'recent' | 'oldest' = 'recent';
 
-  constructor(private authService: AuthService,
-              private prenotazioniService: PrenotazioniService) {}
+  constructor(private authService: AuthService, private prenotazioniService: PrenotazioniService) {}
 
   ngOnInit(): void {
     this.user = this.authService.getUserInfo();
@@ -84,15 +93,11 @@ export class ProfileComponent implements OnInit {
   }
 
   loadPrenotazioni(): void {
-    // Assumiamo che l'id utente sia presente in user (converti in numero se necessario)
     const userId = Number(this.user.id);
     this.prenotazioniService.getPrenotazioniStorico(userId).subscribe({
       next: data => {
-        // Assegna a prenotazioniAll lo storico completo
         this.prenotazioniAll = data;
-        // Filtra per prenotazioni attive (ad es. dove stato === 'attiva')
         this.prenotazioniAttive = this.prenotazioniAll.filter(p => p.stato.toLowerCase() === 'attiva');
-        // Imposta inizialmente il filtro uguale a tutte
         this.filteredReservations = [...this.prenotazioniAll];
       },
       error: err => console.error('Errore nel recupero delle prenotazioni', err)
@@ -107,22 +112,38 @@ export class ProfileComponent implements OnInit {
   }
 
   applyFilter(): void {
-    if (!this.filterText) {
-      this.filteredReservations = [...this.prenotazioniAll];
-    } else {
-      const filter = this.filterText.toLowerCase();
-      this.filteredReservations = this.prenotazioniAll.filter(p =>
-        p.data_prenotata.toLowerCase().includes(filter) || p.stato.toLowerCase().includes(filter)
-      );
+    let filtered = [...this.prenotazioniAll];
+
+    if (this.filterDate) {
+      const filterDateObj = new Date(this.filterDate);
+      filtered = filtered.filter(p => {
+        const prenotazioneDate = new Date(p.data_prenotata);
+        return prenotazioneDate.toDateString() === filterDateObj.toDateString();
+      });
     }
+
+    if (!this.filterStatus.attiva) {
+      filtered = filtered.filter(p => p.stato.toLowerCase() !== 'attiva');
+    }
+
+    if (!this.filterStatus.annullata) {
+      filtered = filtered.filter(p => p.stato.toLowerCase() !== 'annullata');
+    }
+
+    filtered.sort(this.getSortFunction());
+    this.filteredReservations = filtered;
+  }
+
+  getSortFunction(): (a: any, b: any) => number {
+    return this.sortOrder === 'recent'
+      ? (a, b) => new Date(b.data_prenotata).getTime() - new Date(a.data_prenotata).getTime()
+      : (a, b) => new Date(a.data_prenotata).getTime() - new Date(b.data_prenotata).getTime();
   }
 
   cancelReservation(prenotazioneId: number): void {
-    // Chiama il service per annullare la prenotazione
     this.prenotazioniService.cancelPrenotazione(prenotazioneId).subscribe({
       next: response => {
         console.log('Prenotazione annullata', response);
-        // Aggiorna lo storico
         this.loadPrenotazioni();
       },
       error: err => console.error('Errore nell\'annullamento della prenotazione', err)

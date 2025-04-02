@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PrenotazioniService } from '../../../shared/services/prenotazioni.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-prenota-solo',
@@ -18,13 +19,23 @@ import { PrenotazioniService } from '../../../shared/services/prenotazioni.servi
       <label>Note aggiuntive:</label>
       <textarea [(ngModel)]="note" name="note"></textarea>
       
-      <button type="submit">Prenota</button>
+      <button type="submit"
+      [disabled]="isSubmitting"
+  [class.disabled]="isSubmitting">
+  {{ isSubmitting ? 'Prenotazione in corso...' : 'Prenota' }}</button>
+      <div *ngIf="successMessage" class="success">{{ successMessage }}</div>
       <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
     </form>
   `,
   styles: [`
     form { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; }
     .error { color: red; margin-top: 10px; }
+     .success { color: green; margin-top: 10px; }
+  .error { color: red; margin-top: 10px; }
+  .disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
   `]
 })
 export class PrenotaSoloComponent {
@@ -32,8 +43,13 @@ export class PrenotaSoloComponent {
   numeroPosti: number = 1;
   note: string = '';
   errorMessage: string = '';
+  successMessage: string = '';
+  isSubmitting: boolean = false;
+  constructor(
+    private prenotazioniService: PrenotazioniService,
+    private router: Router // Aggiungi Router qui
+  ) {}
 
-  constructor(private prenotazioniService: PrenotazioniService) {}
 
   effettuaPrenotazione() {
     const prenotazione = {
@@ -41,15 +57,24 @@ export class PrenotaSoloComponent {
       numero_posti: this.numeroPosti,
       note_aggiuntive: this.note
     };
+    if (this.isSubmitting) return; // Blocca click multipli
+  
+    this.isSubmitting = true; // Disabilita il pulsante
 
     this.prenotazioniService.effettuaPrenotazione(prenotazione).subscribe({
       next: response => {
         console.log('Prenotazione effettuata', response);
         this.errorMessage = '';
+        this.successMessage = 'Prenotazione effettuata con successo'; // Aggiungi
+        setTimeout(() => {
+          this.router.navigateByUrl('/profilo'); 
+          this.isSubmitting = false;
+        }, 2000);
       },
       error: err => {
         console.error('Errore nella prenotazione', err);
         this.errorMessage = err.error.message || 'Errore durante la prenotazione';
+        this.isSubmitting = false;
       }
     });
   }

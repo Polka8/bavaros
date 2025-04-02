@@ -20,6 +20,15 @@ export class AdminService {
     const headers = this.getAuthHeaders();
     return this.http.put(`${this.apiUrl}/notifiche/${notificaId}/letto`, {}, { headers });
   }
+  markAllAsRead(): Observable<any> {
+    const headers = this.getAuthHeaders();
+    return this.http.put(`${this.apiUrl}/notifiche/mark-all-read`, {}, { headers });
+  }
+
+  getNotificheWithFilters(filters: any): Observable<any> {
+    const headers = this.getAuthHeaders();
+    return this.http.get(`${this.apiUrl}/notifiche`, { headers, params: filters });
+  }
 
   private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('token') || '';
