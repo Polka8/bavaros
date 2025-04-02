@@ -266,47 +266,7 @@ def init_routes(app):
             })
         return jsonify(prenotazioni_data), 200
 
-    @app.route('/api/prenotazioni/calendario', methods=['GET'])
-    @jwt_required()
-    def get_prenotazioni_calendario():
-        user_id = get_jwt_identity()
-        user = User.query.get(user_id)
-        if not user or user.ruolo != RuoloEnum.admin:
-            return jsonify({"message": "Accesso negato"}), 403
-
-        # Recupera i parametri di filtro
-        anno = request.args.get('anno', type=int)
-        mese = request.args.get('mese', type=int)
-        giorno = request.args.get('giorno', type=int)
-        stato = request.args.get('stato', 'attiva')  # ✅ Filtra per stato attivo
-
-        # Costruisci la query
-        query = Prenotazione.query.filter_by(stato=stato)  # ✅ Aggiungi filtro per stato
-
-        # Applica filtri per data se presenti
-        if anno and mese and giorno:
-            data_inizio = datetime(anno, mese, giorno)
-            data_fine = data_inizio + timedelta(days=7)
-            query = query.filter(Prenotazione.data_prenotata.between(data_inizio, data_fine))
-        elif anno and mese:
-            query = query.filter(
-                db.extract('year', Prenotazione.data_prenotata) == anno,
-                db.extract('month', Prenotazione.data_prenotata) == mese
-            )
-
-        prenotazioni = query.all()
-        result = []
-        for p in prenotazioni:
-            utente = User.query.get(p.id_utente)
-            result.append({
-                "id": p.id_prenotazione,
-                "data": p.data_prenotata.isoformat(),
-                "utente": f"{utente.nome} {utente.cognome}",
-                "numero_posti": p.numero_posti,
-                "stato": p.stato,
-                "note": p.note_aggiuntive
-            })
-        return jsonify(result), 200
+   
 
     # Ottieni la lista dei piatti disponibili (usato per il menù)
     @app.route('/api/menu', methods=['GET'])
@@ -368,7 +328,39 @@ def init_routes(app):
             db.session.rollback()
             return jsonify({"message": f"Errore nel salvataggio del menù: {str(e)}"}), 500
 
-    # Ottieni tutti i menù salvati
+    @app.route('/api/menu/public', methods=['GET'])
+    def get_public_menus():
+        try:
+            menus = Menu.query.filter(Menu.is_pubblico == True).all()
+            result = []
+            for m in menus:
+                sezioni_list = []
+                for rel in m.sezioni:
+                    sezione_obj = MenuSezione.query.get(rel.id_sezione)
+                    items = []
+                    for mi in rel.items:
+                        piatto = Piatto.query.get(mi.id_piatto)
+                        items.append({
+                            "id_piatto": piatto.id_piatto,
+                            "nome": piatto.nome,
+                            "prezzo": piatto.prezzo,
+                            "descrizione": piatto.descrizione
+                        })
+                    sezioni_list.append({
+                        "nome_sezione": sezione_obj.nome_sezione,
+                        "piatti": items
+                    })
+                result.append({
+                    "id_menu": m.id_menu,
+                    "titolo": m.titolo,
+                    "data_creazione": m.data_creazione.isoformat(),
+                    "sezioni": sezioni_list
+                })
+            return jsonify(result), 200
+        except Exception as e:
+            return jsonify({"message": f"Errore nel recupero dei menù: {str(e)}"}), 500
+            
+            # Ottieni tutti i menù salvati
     @app.route('/api/menu/saved', methods=['GET'])
     @jwt_required()
     def get_saved_menus():
@@ -592,3 +584,65 @@ def init_routes(app):
         notifica.letto = True
         db.session.commit()
         return jsonify({"message": "Notifica aggiornata"}), 200
+    @app.route('/api/prenotazioni/calendario', methods=['GET'])
+    @jwt_required()
+    def get_prenotazioni_calendario():
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Accesso negato"}), 403
+
+        query = Prenotazione.query.filter_by(stato='attiva')
+
+        # Nuovi parametri per intervalli di date
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        giorno = request.args.get('giorno')
+        
+        if start_date and end_date:
+            try:
+                start = datetime.fromisoformat(start_date)
+                end = datetime.fromisoformat(end_date)
+                query = query.filter(Prenotazione.data_prenotata.between(start, end))
+            except ValueError:
+                return jsonify({"message": "Formato data non valido"}), 400
+                
+        elif giorno:
+            try:
+                target_day = datetime.fromisoformat(giorno)
+                start = target_day.replace(hour=0, minute=0, second=0)
+                end = target_day.replace(hour=23, minute=59, second=59)
+                query = query.filter(Prenotazione.data_prenotata.between(start, end))
+            except ValueError:
+                return jsonify({"message": "Formato giorno non valido"}), 400
+                
+        else:
+            # Mantieni il filtro per mese/anno come fallback
+            anno = request.args.get('anno', type=int)
+            mese = request.args.get('mese', type=int)
+            if anno and mese:
+                start_date = datetime(anno, mese, 1)
+                if mese == 12:
+                    end_date = datetime(anno + 1, 1, 1)
+                else:
+                    end_date = datetime(anno, mese + 1, 1)
+                query = query.filter(Prenotazione.data_prenotata >= start_date,
+                                    Prenotazione.data_prenotata < end_date)
+
+            prenotazioni = query.all()
+            result = []
+            for p in prenotazioni:
+                utente = User.query.get(p.id_utente)
+                dettagli = DettagliPrenotazione.query.filter_by(fk_prenotazione=p.id_prenotazione).all()
+                
+                result.append({
+                    "id_prenotazione": p.id_prenotazione,
+                    "data_prenotata": p.data_prenotata.isoformat(),
+                    "nome": utente.nome,
+                    "cognome": utente.cognome,
+                    "numero_posti": p.numero_posti,
+                    "menu_items": [Piatto.query.get(d.fk_piatto).nome for d in dettagli],
+                    "note_aggiuntive": p.note_aggiuntive
+                })
+            
+            return jsonify(result), 200

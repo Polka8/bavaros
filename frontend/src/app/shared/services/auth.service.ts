@@ -69,7 +69,14 @@ export class AuthService {
   getProfile() {
     return this.http.get(`${environment.apiUrl}/profilo`);
   }
-  
+  isAdmin(): boolean {
+    const user = this.getUserInfo();
+    return user?.ruolo === 'admin';
+  }
+
+  getCurrentUser() {
+    return this.currentUser.asObservable();
+  }
   
   logout() {
     localStorage.removeItem('token');

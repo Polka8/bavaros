@@ -33,6 +33,9 @@ export class MenuService {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
     return this.http.delete(`${this.apiUrl}/menu/${menuId}`, { headers });
   }
+  getPublicMenus(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/menu/public`);
+  }
 
   getSavedMenus(): Observable<any[]> {
     const token = localStorage.getItem('token');

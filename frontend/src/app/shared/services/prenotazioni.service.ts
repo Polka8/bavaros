@@ -47,8 +47,8 @@ export class PrenotazioniService {
   private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('token') || '';
     return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
     });
   }
 
@@ -88,6 +88,35 @@ export class PrenotazioniService {
       catchError(this.handleError)
     );
   }
+  getPrenotazioniAttive(params?: { 
+    anno?: number, 
+    mese?: number,
+    start_date?: string,
+    end_date?: string,
+    giorno?: string
+  }): Observable<any> {
+    const headers = this.getAuthHeaders();
+    let httpParams = new HttpParams();
+  
+    if (params?.anno && params?.mese) {
+      httpParams = httpParams.append('anno', params.anno.toString());
+      httpParams = httpParams.append('mese', params.mese.toString());
+    }
+    
+    if (params?.start_date && params?.end_date) {
+      httpParams = httpParams.append('start_date', params.start_date);
+      httpParams = httpParams.append('end_date', params.end_date);
+    }
+    
+    if (params?.giorno) {
+      httpParams = httpParams.append('giorno', params.giorno);
+    }
+  
+    return this.http.get(`${this.apiUrl}/prenotazioni/calendario`, {
+      headers,
+      params: httpParams
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
 }
-
-

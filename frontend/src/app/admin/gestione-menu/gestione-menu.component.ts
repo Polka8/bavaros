@@ -256,6 +256,7 @@ export class GestioneMenuComponent implements OnInit {
   saveMenu(): void {
     const menuToSave = {
       titolo: this.menuTitle,
+      is_pubblico: true,
       sezioni: this.sections.reduce((acc, section) => {
         acc[section] = this.menuData[section].map(dish => ({ id_piatto: dish.id_piatto }));
         return acc;

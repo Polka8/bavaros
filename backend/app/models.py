@@ -56,6 +56,7 @@ class Menu(db.Model):
     __tablename__ = 'menu'
     id_menu = db.Column(db.Integer, primary_key=True, autoincrement=True)
     titolo = db.Column(db.String(255), nullable=False)
+    is_pubblico = db.Column(db.Boolean, default=True, nullable=False)  # <-- Aggiungi questo
     data_creazione = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     # Relazione con le sezioni del menù
     sezioni = db.relationship('MenuSezioneRel', backref='menu', lazy=True)
