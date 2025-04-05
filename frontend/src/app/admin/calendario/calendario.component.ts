@@ -1,18 +1,28 @@
-import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { 
-  CalendarModule, 
-  CalendarEvent, 
-  CalendarView, 
-  DateAdapter 
+import {
+  CalendarModule,
+  CalendarEvent,
+  CalendarView,
+  DateAdapter
 } from 'angular-calendar';
 import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
-import { 
-  addDays, addMonths, addWeeks, 
-  format, getHours, isSameDay, 
-  isSameMonth, isSameWeek, isToday, 
-  startOfMonth, startOfWeek, endOfWeek, endOfMonth,
-  formatISO
+import {
+  addDays,
+  addMonths,
+  addWeeks,
+  format,
+  isSameDay,
+  isSameMonth,
+  isSameWeek,
+  isToday,
+  startOfMonth,
+  startOfWeek,
+  endOfWeek,
+  endOfMonth,
+  formatISO,
+  getHours,
+  getMinutes
 } from 'date-fns';
 import { MatDatepickerModule, MatDatepicker } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -36,8 +46,6 @@ interface EventGroup {
   events: CalendarEvent[];
 }
 
-
-
 @Component({
   selector: 'app-calendario',
   standalone: true,
@@ -56,27 +64,23 @@ interface EventGroup {
   styleUrls: ['./calendario.component.scss']
 })
 export class CalendarioComponent implements OnInit {
-  showDatePicker = false; // <-- Aggiungi questa riga
-  
+  showDatePicker = false;
   @ViewChild('datePicker') datePicker!: MatDatepicker<Date>;
   CalendarView = CalendarView;
   calendarViews = [CalendarView.Month, CalendarView.Week, CalendarView.Day];
   view: CalendarView = CalendarView.Month;
   viewDate = new Date();
   weekDays = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
-  
   daysInMonth: Date[][] = [];
   daysInWeek: Date[] = [];
   weekRange = '';
-  
-  timeSlots = Array.from({ length: 13 }, (_, i) => ({
-    hour: 8 + i,
-    label: `${(8 + i).toString().padStart(2, '0')}:00`
+  timeSlots = Array.from({ length: 24 }, (_, i) => ({
+    hour: i,
+    label: `${i.toString().padStart(2, '0')}:00`
   }));
-
   colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5'];
   events: CalendarEvent[] = [];
-  
+
   constructor(private prenotazioniService: PrenotazioniService) {}
 
   ngOnInit(): void {
@@ -109,7 +113,7 @@ export class CalendarioComponent implements OnInit {
   }
 
   navigatePeriod(offset: number): void {
-    switch(this.view) {
+    switch (this.view) {
       case CalendarView.Month:
         this.viewDate = addMonths(this.viewDate, offset);
         break;
@@ -124,9 +128,8 @@ export class CalendarioComponent implements OnInit {
     this.loadPrenotazioni();
   }
 
-  // METODO GENERATECALENDAR PRESENTE QUI
   private generateCalendar(): void {
-    switch(this.view) {
+    switch (this.view) {
       case CalendarView.Month:
         this.generateMonthView();
         break;
@@ -138,22 +141,24 @@ export class CalendarioComponent implements OnInit {
         break;
     }
   }
+
   getGroupedEvents(): EventGroup[] {
     const events = this.getEventsForTimeline();
     const groups: EventGroup[] = [];
-    
+
     events.forEach(event => {
       let placed = false;
-      
+
       groups.forEach(group => {
         if (event.start < group.end && (event.end ?? event.start) > group.start) {
           group.events.push(event);
+          group.events.sort((a, b) => a.start.getTime() - b.start.getTime());
           group.start = new Date(Math.min(group.start.getTime(), event.start.getTime()));
           group.end = new Date(Math.max(group.end.getTime(), (event.end ?? event.start).getTime()));
           placed = true;
         }
       });
-  
+
       if (!placed) {
         groups.push({
           start: new Date(event.start),
@@ -162,13 +167,14 @@ export class CalendarioComponent implements OnInit {
         });
       }
     });
-  
+
     return groups;
   }
-  
+
   calculateEventWidth(group: EventGroup): number {
     return 100 / group.events.length;
   }
+
   private generateMonthView(): void {
     const start = startOfMonth(this.viewDate);
     let date = startOfWeek(start, { weekStartsOn: 1 });
@@ -193,14 +199,13 @@ export class CalendarioComponent implements OnInit {
   }
 
   private generateDayView(): void {
-    // Implementazione per la vista giornaliera
-    // (Mantieni la tua implementazione esistente)
+    // Ora non facciamo nulla qui, la logica è nel template
   }
 
   private loadPrenotazioni(): void {
     let params: any = {};
-  
-    switch(this.view) {
+
+    switch (this.view) {
       case CalendarView.Month:
         params = {
           anno: this.viewDate.getFullYear(),
@@ -220,22 +225,38 @@ export class CalendarioComponent implements OnInit {
         };
         break;
     }
-  
+
     this.prenotazioniService.getPrenotazioniAttive(params).subscribe({
       next: (reservations: PrenotazioneInterface[]) => {
-        this.events = reservations.map(res => {
-          const start = new Date(res.data_prenotata);
-          const end = new Date(res.data_prenotata);
-          
-          // Normalizza le date rimuovendo l'ora
-          start.setHours(0, 0, 0, 0);
-          end.setHours(23, 59, 59, 999);
-  
+        console.log('Prenotazioni ricevute:', reservations); // <--- AGGIUNGI QUESTO
+
+        this.events = reservations.map((res) => {
+          let start = new Date(res.data_prenotata);
+          let end = new Date(res.data_prenotata);
+
+          if (this.view === CalendarView.Day) {
+            const dateParts = res.data_prenotata.split('T')[0].split('-');
+            const timeParts = res.data_prenotata.split('T')[1].split(':');
+            start = new Date(
+              parseInt(dateParts[0]),
+              parseInt(dateParts[1]) - 1,
+              parseInt(dateParts[2]),
+              parseInt(timeParts[0]),
+              parseInt(timeParts[1]),
+              parseInt(timeParts[2].split('.')[0])
+            );
+          // Imposta una durata minima di 30 minuti se non è specificata una fine
+          end = new Date(start.getTime() + 30 * 60 * 1000);
+          } else {
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+          }
+
           return {
             start: start,
             end: end,
             title: `${res.nome} ${res.cognome} - ${res.numero_posti} posti`,
-            color: { 
+            color: {
               primary: this.colors[res.id_prenotazione % this.colors.length],
               secondary: this.colors[res.id_prenotazione % this.colors.length]
             },
@@ -249,8 +270,11 @@ export class CalendarioComponent implements OnInit {
             }
           };
         });
+        this.events.sort((a, b) => a.start.getTime() - b.start.getTime());
       },
-      error: (err) => console.error('Errore caricamento prenotazioni:', err)
+      error: (error) => {
+        console.error('Errore nel recupero delle prenotazioni:', error);
+      }
     });
   }
 
@@ -263,25 +287,46 @@ export class CalendarioComponent implements OnInit {
       .filter(event => isSameDay(event.start, this.viewDate))
       .sort((a, b) => a.start.getTime() - b.start.getTime());
   }
-  calculateEventTop(event: CalendarEvent): number {
-    const start = new Date(event.start);
-    return (start.getHours() - 8) * 60 + start.getMinutes();
+
+  getEventsForDayTimeline(): CalendarEvent[] {
+    const dailyEvents = this.events.filter(event => isSameDay(event.start, this.viewDate));
+    console.log('Eventi del giorno:', dailyEvents.map(e => e.start)); // <--- AGGIUNGI QUESTO
+    dailyEvents.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    const positionedEvents: CalendarEvent[] = [];
+    const eventsByStartTime: { [key: number]: CalendarEvent[] } = {};
+
+    dailyEvents.forEach(event => {
+      const startTime = event.start.getTime();
+      if (!eventsByStartTime[startTime]) {
+        eventsByStartTime[startTime] = [];
+      }
+      eventsByStartTime[startTime].push(event);
+    });
+
+    for (const startTime in eventsByStartTime) {
+      const sameTimeEvents = eventsByStartTime[startTime];
+      sameTimeEvents.forEach((event, index) => {
+        // Aggiungiamo un 'offset' all'oggetto meta per posizionarlo leggermente a destra
+        event.meta.overlapOffset = index * 15; // Prova con un offset di 15px
+        positionedEvents.push(event);
+      });
+    }
+
+    return positionedEvents;
   }
-  calculateEventPosition(event: CalendarEvent): number {
-    const start = new Date(event.start);
-    const minutesFromTop = (start.getHours() - 8) * 60 + start.getMinutes();
-    return minutesFromTop;
-  }
-  
-  calculateEventDuration(event: CalendarEvent): number {
-    const end = event.end || event.start;
-    return (end.getTime() - event.start.getTime()) / (1000 * 60);
+  calculateTopPosition(event: CalendarEvent): number {
+    const startHour = getHours(event.start);
+    const startMinute = getMinutes(event.start);
+    const minutesFromMidnight = startHour * 60 + startMinute;
+    console.log('Evento:', event.meta.nome, 'Inizio:', event.start, 'Top:', minutesFromMidnight); // <--- AGGIUNGI QUESTO
+    return minutesFromMidnight;
   }
 
-  calculateEventHeight(event: CalendarEvent): number {
-    const end = event.end || event.start;
+  calculateHeight(event: CalendarEvent): number {
+    const end = event.end ?? event.start; // Usa event.start se event.end è null o undefined
     const durationMinutes = (end.getTime() - event.start.getTime()) / (1000 * 60);
-    return Math.max(durationMinutes, 15); // Altezza minima di 15px
+    return Math.max(durationMinutes, 30); // Altezza minima di 30px
   }
 
   getTooltipText(event: CalendarEvent): string {

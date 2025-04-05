@@ -52,6 +52,12 @@ export class PrenotaSoloComponent {
 
 
   effettuaPrenotazione() {
+    const prenotazioneDate = new Date(this.dataPrenotata);
+    const now = new Date();
+    if (prenotazioneDate < now) {  
+      this.errorMessage = 'La data e ora prenotata non possono essere antecedente all\'ora attuale';
+      return;
+    }
     const prenotazione = {
       data_prenotata: this.dataPrenotata,
       numero_posti: this.numeroPosti,

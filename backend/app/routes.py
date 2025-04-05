@@ -133,7 +133,7 @@ def init_routes(app):
             # Validazione data
             try:
                 data_prenotata = datetime.fromisoformat(data['data_prenotata'])
-                if data_prenotata.date() < datetime.utcnow().date():
+                if data_prenotata < datetime.utcnow():
                     return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
             except Exception:
                 return jsonify({"message": "Formato data non valido"}), 400
@@ -184,7 +184,7 @@ def init_routes(app):
         # Validazione data
         try:
             data_prenotata = datetime.fromisoformat(data['data_prenotata'])
-            if data_prenotata.date() < datetime.utcnow().date():
+            if data_prenotata < datetime.utcnow():
                 return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
         except Exception:
             return jsonify({"message": "Formato data non valido"}), 400
@@ -609,65 +609,38 @@ def init_routes(app):
         notifica.letto = True
         db.session.commit()
         return jsonify({"message": "Notifica aggiornata"}), 200
-    @app.route('/api/prenotazioni/calendario', methods=['GET'])
+        
+    @app.route('/api/prenotazioni/calendario', methods=['GET', 'OPTIONS'])
     @jwt_required()
     def get_prenotazioni_calendario():
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         if not user or user.ruolo != RuoloEnum.admin:
             return jsonify({"message": "Accesso negato"}), 403
 
         query = Prenotazione.query.filter_by(stato='attiva')
+        # ... [logica per filtrare le prenotazioni] ...
+        result = []
+        for p in query.all():
+            utente = User.query.get(p.id_utente)
+            dettagli = DettagliPrenotazione.query.filter_by(fk_prenotazione=p.id_prenotazione).all()
+            result.append({
+                "id_prenotazione": p.id_prenotazione,
+                "data_prenotata": p.data_prenotata.isoformat(),
+                "nome": utente.nome,
+                "cognome": utente.cognome,
+                "numero_posti": p.numero_posti,
+                "menu_items": [Piatto.query.get(d.fk_piatto).nome for d in dettagli],
+                "note_aggiuntive": p.note_aggiuntive
+            })
 
-        # Nuovi parametri per intervalli di date
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        giorno = request.args.get('giorno')
-        
-        if start_date and end_date:
-            try:
-                start = datetime.fromisoformat(start_date)
-                end = datetime.fromisoformat(end_date)
-                query = query.filter(Prenotazione.data_prenotata.between(start, end))
-            except ValueError:
-                return jsonify({"message": "Formato data non valido"}), 400
-                
-        elif giorno:
-            try:
-                target_day = datetime.fromisoformat(giorno)
-                start = target_day.replace(hour=0, minute=0, second=0)
-                end = target_day.replace(hour=23, minute=59, second=59)
-                query = query.filter(Prenotazione.data_prenotata.between(start, end))
-            except ValueError:
-                return jsonify({"message": "Formato giorno non valido"}), 400
-                
-        else:
-            # Mantieni il filtro per mese/anno come fallback
-            anno = request.args.get('anno', type=int)
-            mese = request.args.get('mese', type=int)
-            if anno and mese:
-                start_date = datetime(anno, mese, 1)
-                if mese == 12:
-                    end_date = datetime(anno + 1, 1, 1)
-                else:
-                    end_date = datetime(anno, mese + 1, 1)
-                query = query.filter(Prenotazione.data_prenotata >= start_date,
-                                    Prenotazione.data_prenotata < end_date)
-
-            prenotazioni = query.all()
-            result = []
-            for p in prenotazioni:
-                utente = User.query.get(p.id_utente)
-                dettagli = DettagliPrenotazione.query.filter_by(fk_prenotazione=p.id_prenotazione).all()
-                
-                result.append({
-                    "id_prenotazione": p.id_prenotazione,
-                    "data_prenotata": p.data_prenotata.isoformat(),
-                    "nome": utente.nome,
-                    "cognome": utente.cognome,
-                    "numero_posti": p.numero_posti,
-                    "menu_items": [Piatto.query.get(d.fk_piatto).nome for d in dettagli],
-                    "note_aggiuntive": p.note_aggiuntive
-                })
-            
-            return jsonify(result), 200
+        response = jsonify(result)
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+        return response, 200

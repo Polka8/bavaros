@@ -121,7 +121,7 @@ export class PrenotaConMenuComponent implements OnInit {
     const prenotazioneDate = new Date(this.dataPrenotata);
     const today = new Date();
     if (prenotazioneDate < today) {
-      this.errorMessage = 'La data prenotata non può essere antecedente ad oggi';
+      this.errorMessage = 'La data e ora prenotata non possono essere antecedente ad oggi';
       return;
     }
     // Validazione posti
