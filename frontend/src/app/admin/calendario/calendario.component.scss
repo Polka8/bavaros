@@ -95,12 +95,15 @@
     display: contents;
   }
 
+  
   .day-cell {
+    position: relative;
+    overflow: visible;
     min-height: 120px;
     background: white;
     padding: 8px;
     border: 1px solid #dee2e6;
-    position: relative;
+    transition: all 0.2s;
 
     &:not(.current-month) {
       background: #f8f9fa;
@@ -109,6 +112,20 @@
 
     &.today {
       background: #fff3e0;
+    }
+
+    &.blocked {
+      background-color: #f0f0f0;
+      opacity: 0.7;
+      
+      .day-number {
+        opacity: 0.5;
+      }
+    }
+
+    .day-content {
+      position: relative;
+      z-index: 1;
     }
 
     .day-number {
@@ -122,7 +139,37 @@
       }
     }
 
+    .block-btn, .unblock-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      cursor: pointer;
+      display: none;
+      z-index: 1000;
+    }
+
+    .block-btn {
+      background: #ff4444;
+      color: white;
+    }
+
+    .unblock-btn {
+      background: #4CAF50;
+      color: white;
+    }
+
+    &:hover {
+      .block-btn, .unblock-btn {
+        display: block;
+      }
+    }
+
     .events {
+      z-index: 0;
+      position: relative;
       display: flex;
       flex-wrap: wrap;
       gap: 2px;

@@ -1,5 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatDialog } from '@angular/material/dialog';
+import { BlockConfirmationDialog } from './block-confirmation.dialog';
 import {
   CalendarModule,
   CalendarEvent,
@@ -22,7 +24,8 @@ import {
   endOfMonth,
   formatISO,
   getHours,
-  getMinutes
+  getMinutes,
+  parseISO
 } from 'date-fns';
 import { MatDatepickerModule, MatDatepicker } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -73,6 +76,7 @@ export class CalendarioComponent implements OnInit {
   weekDays = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
   daysInMonth: Date[][] = [];
   daysInWeek: Date[] = [];
+  blockedDays: Date[] = [];
   weekRange = '';
   timeSlots = Array.from({ length: 24 }, (_, i) => ({
     hour: i,
@@ -81,12 +85,26 @@ export class CalendarioComponent implements OnInit {
   colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5'];
   events: CalendarEvent[] = [];
 
-  constructor(private prenotazioniService: PrenotazioniService) {}
+  constructor(
+    private prenotazioniService: PrenotazioniService,
+    private dialog: MatDialog
+  ) {}
 
   ngOnInit(): void {
+    this.loadBlockedDays();
     this.generateCalendar();
     this.loadPrenotazioni();
   }
+  loadBlockedDays() {
+    this.prenotazioniService.getBlockedDays().subscribe({
+      next: days => {
+        this.blockedDays = days.map(d => typeof d === 'string' ? parseISO(d) : d); // Ora sicuramente Date
+      },
+      error: err => console.error("Errore nel caricamento giorni bloccati:", err)
+    });
+  }
+  
+
 
   setView(view: CalendarView): void {
     this.view = view;
@@ -111,6 +129,48 @@ export class CalendarioComponent implements OnInit {
     this.loadPrenotazioni();
     this.datePicker.close();
   }
+  // calendario.component.ts
+openBlockConfirmation(event: Event, day: Date) {
+  event.stopPropagation(); // Ora funzionerà
+  if (confirm('Confermare il blocco di questo giorno?')) {
+    this.blockDay(day);
+  }
+}
+  
+blockDay(day: Date) {
+  this.prenotazioniService.blockDay(day).subscribe({
+    next: () => {
+      this.blockedDays.push(day);
+      this.refreshView(); // ✅ Aggiorna la vista
+    },
+    error: err => console.error("Errore blocco:", err)
+  });
+}
+  
+  
+  isBlocked(day: Date): boolean {
+    return this.blockedDays.some(blockedDay => 
+      isSameDay(blockedDay, day)
+    );
+  }
+  // Aggiungi nuovo metodo per lo sblocco
+openUnblockConfirmation(event: Event, day: Date) {
+  event.stopPropagation();
+  if (!confirm('Confermare lo sblocco di questo giorno?')) return;
+  
+  this.unblockDay(day);
+}
+
+unblockDay(day: Date) {
+  this.prenotazioniService.unblockDay(day).subscribe({
+    next: () => {
+      this.blockedDays = this.blockedDays.filter(d => !isSameDay(d, day));
+      this.refreshView(); // ✅ Aggiorna la vista
+    },
+    error: err => console.error("Errore sblocco:", err)
+  });
+}
+  
 
   navigatePeriod(offset: number): void {
     switch (this.view) {
@@ -225,6 +285,9 @@ export class CalendarioComponent implements OnInit {
         };
         break;
     }
+    this.prenotazioniService.getBlockedDays().subscribe(days => {
+      this.blockedDays = days;
+    });
 
     this.prenotazioniService.getPrenotazioniAttive(params).subscribe({
       next: (reservations: PrenotazioneInterface[]) => {
@@ -335,6 +398,7 @@ Posti: ${event.meta.posti}
 ${event.meta.menu?.length ? 'Menu: ' + event.meta.menu.join(', ') : ''}
 ${event.meta.note ? 'Note: ' + event.meta.note : ''}`;
   }
+  // Removed duplicate openBlockConfirmation method
 
   isSameMonth(date1: Date, date2: Date): boolean {
     return isSameMonth(date1, date2);
@@ -346,5 +410,9 @@ ${event.meta.note ? 'Note: ' + event.meta.note : ''}`;
 
   isToday(date: Date): boolean {
     return isToday(date);
+  }
+  private refreshView() {
+    this.generateCalendar();
+    this.loadPrenotazioni();
   }
 }

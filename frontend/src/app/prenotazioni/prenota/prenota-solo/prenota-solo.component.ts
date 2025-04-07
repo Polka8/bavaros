@@ -11,18 +11,39 @@ import { Router } from '@angular/router';
   template: `
     <form (ngSubmit)="effettuaPrenotazione()">
       <label>Data Prenotata:</label>
-      <input type="datetime-local" [(ngModel)]="dataPrenotata" name="dataPrenotata" required />
+      <input type="datetime-local" 
+             [(ngModel)]="dataPrenotata" 
+             name="dataPrenotata" 
+             required 
+             (change)="aggiornaPostiRimanenti()"/> <!-- Aggiunto evento change -->
       
       <label>Numero Posti:</label>
-      <input type="number" [(ngModel)]="numeroPosti" name="numeroPosti" required min="1" />
-      
+      <input type="number" 
+             [(ngModel)]="numeroPosti" 
+             name="numeroPosti" 
+             required 
+             min="1" 
+             (input)="aggiornaPostiRimanenti()"/> <!-- Aggiunto evento input -->
+
+      <!-- Avvisi posti rimanenti -->
+      <div *ngIf="postiRimanenti !== null">
+        <div *ngIf="postiRimanenti <= 0" class="error">
+          Posti esauriti per questa data!
+        </div>
+        <div *ngIf="postiRimanenti > 0 && postiRimanenti <= 10" class="warning">
+          Attenzione: solo {{ postiRimanenti }} posti disponibili!
+        </div>
+      </div>
+
       <label>Note aggiuntive:</label>
       <textarea [(ngModel)]="note" name="note"></textarea>
       
-      <button type="submit"
-      [disabled]="isSubmitting"
-  [class.disabled]="isSubmitting">
-  {{ isSubmitting ? 'Prenotazione in corso...' : 'Prenota' }}</button>
+      <button 
+        type="submit"
+        [disabled]="isSubmitting || postiRimanenti <= 0 || (postiRimanenti - (numeroPosti || 0)) < 0">
+        {{ isSubmitting ? 'Prenotazione in corso...' : 'Prenota' }}
+      </button>
+
       <div *ngIf="successMessage" class="success">{{ successMessage }}</div>
       <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
     </form>
@@ -30,12 +51,9 @@ import { Router } from '@angular/router';
   styles: [`
     form { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; }
     .error { color: red; margin-top: 10px; }
-     .success { color: green; margin-top: 10px; }
-  .error { color: red; margin-top: 10px; }
-  .disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
+    .success { color: green; margin-top: 10px; }
+    .warning { color: orange; margin-top: 10px; }
+    .disabled { opacity: 0.7; cursor: not-allowed; }
   `]
 })
 export class PrenotaSoloComponent {
@@ -45,33 +63,56 @@ export class PrenotaSoloComponent {
   errorMessage: string = '';
   successMessage: string = '';
   isSubmitting: boolean = false;
+  postiRimanenti: number = 100;
   constructor(
     private prenotazioniService: PrenotazioniService,
-    private router: Router // Aggiungi Router qui
+    private router: Router
   ) {}
 
+  // Aggiorna posti rimanenti quando cambia data o numero posti
+  aggiornaPostiRimanenti() {
+    if (this.dataPrenotata) {
+      this.prenotazioniService.getPostiRimanenti(this.dataPrenotata)
+        .subscribe({
+          next: (posti) => {
+            this.postiRimanenti = posti >= 0 ? posti : 0; // Valore di fallback
+          },
+          error: () => {
+            this.postiRimanenti = 0; // Gestione errori
+          }
+        });
+    }
+  }
 
   effettuaPrenotazione() {
+    // Controllo posti rimanenti
+    if (this.postiRimanenti !== null && 
+        (this.postiRimanenti - this.numeroPosti) < 0) {
+      this.errorMessage = 'Non ci sono abbastanza posti disponibili!';
+      return;
+    }
+
+    // Resto della logica esistente...
     const prenotazioneDate = new Date(this.dataPrenotata);
     const now = new Date();
     if (prenotazioneDate < now) {  
       this.errorMessage = 'La data e ora prenotata non possono essere antecedente all\'ora attuale';
       return;
     }
+
     const prenotazione = {
       data_prenotata: this.dataPrenotata,
       numero_posti: this.numeroPosti,
       note_aggiuntive: this.note
     };
-    if (this.isSubmitting) return; // Blocca click multipli
-  
-    this.isSubmitting = true; // Disabilita il pulsante
+
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
 
     this.prenotazioniService.effettuaPrenotazione(prenotazione).subscribe({
       next: response => {
         console.log('Prenotazione effettuata', response);
-        this.errorMessage = '';
-        this.successMessage = 'Prenotazione effettuata con successo'; // Aggiungi
+        this.successMessage = 'Prenotazione effettuata con successo';
         setTimeout(() => {
           this.router.navigateByUrl('/profilo'); 
           this.isSubmitting = false;

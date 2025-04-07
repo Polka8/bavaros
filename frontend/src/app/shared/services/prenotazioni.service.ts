@@ -1,8 +1,9 @@
 // prenotazioni.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
-import { catchError, Observable, throwError } from 'rxjs';
+import { catchError, Observable, throwError, take, map } from 'rxjs';
 import { environment } from '../../environment/environment.component';
+import { formatISO, isSameDay,parseISO } from 'date-fns';
 
 @Injectable({
   providedIn: 'root'
@@ -88,6 +89,23 @@ export class PrenotazioniService {
       catchError(this.handleError)
     );
   }
+  getPostiRimanenti(dataPrenotata: string): Observable<number> {
+    const headers = this.getAuthHeaders();
+    return this.http.get<number>(`${this.apiUrl}/posti-rimanenti`, {
+      headers,
+      params: { data: dataPrenotata }
+    }).pipe(
+      catchError(() => {
+        // Check if date is blocked
+        const date = new Date(dataPrenotata);
+        return this.getBlockedDays().pipe(
+          take(1),
+          map((days: Date[]) => days.some((d: Date) => isSameDay(d, date)) ? 0 : 0)
+        );
+      })
+    );
+  }
+
   getPrenotazioniAttive(params?: { 
     anno?: number, 
     mese?: number,
@@ -119,4 +137,28 @@ export class PrenotazioniService {
       catchError(this.handleError)
     );
   }
+  // prenotazioni.service.ts
+  blockDay(date: Date): Observable<any> {
+    const formattedDate = formatISO(date, { representation: 'date' });
+    return this.http.post(`${this.apiUrl}/block-day`, { date: formattedDate }, 
+      { headers: this.getAuthHeaders() });
+  }
+  
+  // Modifica il metodo getBlockedDays()
+getBlockedDays(): Observable<Date[]> {
+  // Aggiungi gli headers di autenticazione
+  return this.http.get<string[]>(`${this.apiUrl}/blocked-days`, {
+    headers: this.getAuthHeaders() // ✅ Aggiunto
+  }).pipe(
+    map(dates => dates.map(dateString => parseISO(dateString)))
+  );
+}
+  // Aggiungi metodo per sbloccare
+// prenotazioni.service.ts
+// prenotazioni.service.ts
+unblockDay(date: Date): Observable<any> {
+  const formattedDate = formatISO(date, { representation: 'date' });
+  return this.http.delete(`${this.apiUrl}/blocked-days/${formattedDate}`, 
+    { headers: this.getAuthHeaders() });
+}
 }

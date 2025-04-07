@@ -88,3 +88,14 @@ class Notifica(db.Model):
     data_notifica = db.Column(db.DateTime, default=datetime.utcnow)
     letto = db.Column(db.Boolean, default=False)
     id_prenotazione = db.Column(db.Integer, db.ForeignKey('prenotazione.id_prenotazione'))
+class DisponibilitaGiornaliera(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Date, nullable=False, unique=True)
+    posti_totali = db.Column(db.Integer, default=100)
+    posti_prenotati = db.Column(db.Integer, default=0)
+    bloccata = db.Column(db.Boolean, default=False)  # Blocco admin
+# In models.py
+class BlockedDay(db.Model):
+    __tablename__ = 'blocked_days'
+    id = db.Column(db.Integer, primary_key=True)
+    blocked_date = db.Column(db.Date, unique=True, nullable=False)

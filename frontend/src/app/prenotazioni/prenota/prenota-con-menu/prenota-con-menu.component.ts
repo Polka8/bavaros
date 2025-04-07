@@ -33,19 +33,40 @@ import { Router } from '@angular/router';
     <hr />
 
     <form (ngSubmit)="effettuaPrenotazione()">
+      <!-- Aggiunti avvisi posti e logica di aggiornamento -->
       <label>Data Prenotata:</label>
-      <input type="datetime-local" [(ngModel)]="dataPrenotata" name="dataPrenotata" required />
-      
+      <input type="datetime-local" 
+             [(ngModel)]="dataPrenotata" 
+             name="dataPrenotata" 
+             required 
+             (change)="aggiornaPostiRimanenti()"/>
+
       <label>Numero Posti:</label>
-      <input type="number" [(ngModel)]="numeroPosti" name="numeroPosti" required min="1" />
+      <input type="number" 
+             [(ngModel)]="numeroPosti" 
+             name="numeroPosti" 
+             required 
+             min="1" 
+             (input)="aggiornaPostiRimanenti()"/>
+
+      <div *ngIf="postiRimanenti !== null">
+        <div *ngIf="postiRimanenti <= 0" class="error">
+          Posti esauriti per questa data!
+        </div>
+        <div *ngIf="postiRimanenti > 0 && postiRimanenti <= 10" class="warning">
+          Attenzione: solo {{ postiRimanenti }} posti disponibili!
+        </div>
+      </div>
       
       <label>Note aggiuntive:</label>
       <textarea [(ngModel)]="note" name="note"></textarea>
       
-      <button type="submit"
-          [disabled]="isSubmitting"
-      [class.disabled]="isSubmitting">
-      {{ isSubmitting ? 'Prenotazione in corso...' : 'Prenota' }}
+      <button 
+        type="submit"
+        [disabled]="isSubmitting || postiRimanenti <= 0 || (postiRimanenti - (numeroPosti || 0)) < 0"
+        [class.disabled]="isSubmitting"
+      >
+        {{ isSubmitting ? 'Prenotazione in corso...' : 'Prenota' }}
       </button>
       <div *ngIf="successMessage" class="success">{{ successMessage }}</div>
       <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
@@ -53,6 +74,10 @@ import { Router } from '@angular/router';
   `,
   styles: [`
     .error { color: red; margin-top: 10px; }
+    .warning {
+      color: orange;
+      margin-top: 10px;
+    }
     select { margin-bottom: 20px; padding: 5px; }
     input, textarea { margin-bottom: 10px; }
     .disabled {
@@ -66,7 +91,7 @@ export class PrenotaConMenuComponent implements OnInit {
   savedMenus: any[] = [];
   selectedMenuId: number | null = null;
   selectedMenu: any = null;
-
+  postiRimanenti: number=100;
   dataPrenotata: string = '';
   numeroPosti: number = 1;
   note: string = '';
@@ -82,6 +107,20 @@ export class PrenotaConMenuComponent implements OnInit {
     this.loadSavedMenus();
   }
 
+  aggiornaPostiRimanenti() {
+    if (this.dataPrenotata) {
+      this.prenotazioniService.getPostiRimanenti(this.dataPrenotata)
+        .subscribe({
+          next: (posti) => {
+            this.postiRimanenti = posti >= 0 ? posti : 0; // Valore di fallback
+          },
+          error: () => {
+            this.postiRimanenti = 0; // Gestione errori
+          }
+        });
+    }
+  }
+    
   // Carica i menù creati dall'admin
   loadSavedMenus(): void {
     const token = localStorage.getItem('token');
@@ -120,6 +159,11 @@ export class PrenotaConMenuComponent implements OnInit {
     // Validazione data: non può essere antecedente a oggi
     const prenotazioneDate = new Date(this.dataPrenotata);
     const today = new Date();
+    if (this.postiRimanenti !== null && 
+      (this.postiRimanenti - this.numeroPosti) < 0) {
+    this.errorMessage = 'Non ci sono abbastanza posti disponibili!';
+    return;
+  }
     if (prenotazioneDate < today) {
       this.errorMessage = 'La data e ora prenotata non possono essere antecedente ad oggi';
       return;

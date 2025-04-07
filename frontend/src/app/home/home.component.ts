@@ -84,7 +84,7 @@ import { MenuService } from '../shared/services/menu.service';
       <section class="cta-section">
         <h2>Pronto a iniziare?</h2>
         <button mat-stroked-button color="accent" (click)="navigateToRegistration()">
-          Registrati ora
+          effettua la tua prenotazione
         </button>
       </section>
     </main>
@@ -237,9 +237,9 @@ export class HomeComponent {
   currentMenuIndex = 0;
   visibleMenusCount = 2;
   features = [
-    { icon: 'google', title: 'Google Reviews', image: 'src/assets/google.png', description: '★★★★★ "Il miglior servizio che abbia mai provato!"' },
-    { icon: 'tripadvisor', title: 'TripAdvisor', image: 'src/assets/tripadvisor.png', description: '★★★★★ "Esperienza incredibile, assolutamente da provare!"' },
-    { icon: 'yelp', title: 'Yelp', image: 'src/assets/yelp.png', description: '★★★★★ "Servizio eccellente e qualità superiore!"' }
+    { icon: 'google', title: 'Google Reviews', image: 'assets/google.png', description: '★★★★★ "Il miglior servizio che abbia mai provato!"' },
+    { icon: 'tripadvisor', title: 'TripAdvisor', image: 'assets/tripadvisor.png', description: '★★★★★ "Esperienza incredibile, assolutamente da provare!"' },
+    { icon: 'yelp', title: 'Yelp', image: 'assets/yelp.png', description: '★★★★★ "Servizio eccellente e qualità superiore!"' }
   ];
 
   constructor(

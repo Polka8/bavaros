@@ -1,14 +1,20 @@
 from flask import jsonify, request
-from .models import Notifica, db, User, RuoloEnum, Prenotazione, DettagliPrenotazione, Piatto, Menu, MenuSezione, MenuSezioneRel, MenuItem
+from .models import (
+    BlockedDay, Notifica, db, User, RuoloEnum, Prenotazione,
+    DettagliPrenotazione, Piatto, Menu, MenuSezione, MenuSezioneRel, MenuItem
+)
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta, datetime
 import os
 import re
 import json
+from flask_cors import CORS  # gestione centralizzata del CORS
 
 def init_routes(app):
+    # Abilita CORS per tutti gli endpoint /api/*, specificando l'origine consentita
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost:4200"}})
 
-    @ app.route('/api/register', methods=['POST'])
+    @app.route('/api/register', methods=['POST'])
     def register():
         data = request.get_json()
         if not data or 'email' not in data or 'password' not in data:
@@ -33,7 +39,6 @@ def init_routes(app):
             db.session.add(new_user)
             db.session.commit()
 
-            # Correggi qui: usa new_user.id
             access_token = create_access_token(identity=str(new_user.id), expires_delta=timedelta(days=1))
             return jsonify({
                 "message": "Registrazione completata",
@@ -51,8 +56,7 @@ def init_routes(app):
             db.session.rollback()
             return jsonify({"message": f"Errore server: {str(e)}"}), 500
 
-
-    @ app.route('/api/login', methods=['POST'])
+    @app.route('/api/login', methods=['POST'])
     def login():
         data = request.get_json()
         if not data or 'email' not in data or 'password' not in data:
@@ -101,7 +105,6 @@ def init_routes(app):
             }
         }), 200
 
-
     @app.route('/api/profilo', methods=['GET'])
     @jwt_required()
     def get_profile():
@@ -119,76 +122,29 @@ def init_routes(app):
             "creato_il": user.creato_il.isoformat()
         }), 200
 
-    # --- Endpoint per prenotazioni ---
-
-    # Endpoint per prenotazioni "solo posti"
     @app.route('/api/prenotazioni', methods=['POST'])
     @jwt_required()
     def crea_prenotazione():
-            user_id = get_jwt_identity()
-            user = User.query.get(user_id)
-            data = request.get_json()
-            if not data:
-                return jsonify({"message": "Nessun dato inviato"}), 400
-            # Validazione data
-            try:
-                data_prenotata = datetime.fromisoformat(data['data_prenotata'])
-                if data_prenotata < datetime.utcnow():
-                    return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
-            except Exception:
-                return jsonify({"message": "Formato data non valido"}), 400
-            # Validazione numero di posti
-            try:
-                num_posti = int(data.get('numero_posti', 0))
-                if num_posti < 1:
-                    return jsonify({"message": "Il numero di posti deve essere almeno 1"}), 400
-            except Exception:
-                return jsonify({"message": "Numero di posti non valido"}), 400
-
-            try:
-                nuova_prenotazione = Prenotazione(
-                    data_prenotata=data_prenotata,
-                    stato="attiva",
-                    id_utente=user_id,
-                    data_creazione=datetime.utcnow(),
-                    note_aggiuntive=data.get('note_aggiuntive', ''),
-                    numero_posti=num_posti
-                )
-                db.session.add(nuova_prenotazione)
-                db.session.commit()
-                notifica = Notifica(
-                    tipo="nuova_prenotazione",
-                    messaggio=f"Nuova prenotazione da {user.nome} {user.cognome} per {num_posti} posti il {data_prenotata}",
-                    id_prenotazione=nuova_prenotazione.id_prenotazione
-                )
-                db.session.add(notifica)
-                db.session.commit()
-                return jsonify({
-                    "message": "Prenotazione creata con successo",
-                    "prenotazione_id": nuova_prenotazione.id_prenotazione
-                }), 201
-            except Exception as e:
-                db.session.rollback()
-                return jsonify({"message": f"Errore server: {str(e)}"}), 500
-
-    @app.route('/api/prenotazioni/menu', methods=['POST'])
-    @jwt_required()
-    def crea_prenotazione_con_menu():
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         data = request.get_json()
-        
         if not data:
             return jsonify({"message": "Nessun dato inviato"}), 400
-        
-        # Validazione data
+
+        # Validazione e conversione della data
         try:
             data_prenotata = datetime.fromisoformat(data['data_prenotata'])
-            if data_prenotata < datetime.utcnow():
-                return jsonify({"message": "La data prenotata non può essere antecedente ad oggi"}), 400
         except Exception:
             return jsonify({"message": "Formato data non valido"}), 400
-        
+
+        # Controlla se il giorno è bloccato
+        blocked = BlockedDay.query.filter_by(blocked_date=data_prenotata.date()).first()
+        if blocked:
+            return jsonify({"message": "Giorno bloccato per le prenotazioni"}), 403
+
+        if data_prenotata < datetime.utcnow():
+            return jsonify({"message": "La data/ora prenotata non può essere antecedente all'ora attuale"}), 400
+
         # Validazione numero di posti
         try:
             num_posti = int(data.get('numero_posti', 0))
@@ -196,19 +152,98 @@ def init_routes(app):
                 return jsonify({"message": "Il numero di posti deve essere almeno 1"}), 400
         except Exception:
             return jsonify({"message": "Numero di posti non valido"}), 400
-        
-        # Validazione piatti
+
+        # Controllo della capienza giornaliera
+        posti_giornata = db.session.query(
+            db.func.sum(Prenotazione.numero_posti)
+        ).filter(
+            db.func.DATE(Prenotazione.data_prenotata) == data_prenotata.date(),
+            Prenotazione.stato == "attiva"
+        ).scalar() or 0
+
+        if posti_giornata + num_posti > 100:
+            return jsonify({"message": "Superato il numero massimo di posti disponibili per questa data"}), 400
+
+        try:
+            nuova_prenotazione = Prenotazione(
+                data_prenotata=data_prenotata,
+                stato="attiva",
+                id_utente=user_id,
+                data_creazione=datetime.utcnow(),
+                note_aggiuntive=data.get('note_aggiuntive', ''),
+                numero_posti=num_posti
+            )
+            db.session.add(nuova_prenotazione)
+            db.session.commit()
+
+            notifica = Notifica(
+                tipo="nuova_prenotazione",
+                messaggio=f"Nuova prenotazione da {user.nome} {user.cognome} per {num_posti} posti il {data_prenotata}",
+                id_prenotazione=nuova_prenotazione.id_prenotazione
+            )
+            db.session.add(notifica)
+            db.session.commit()
+            return jsonify({
+                "message": "Prenotazione creata con successo",
+                "prenotazione_id": nuova_prenotazione.id_prenotazione
+            }), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"message": f"Errore server: {str(e)}"}), 500
+
+    @app.route('/api/prenotazioni/menu', methods=['POST'])
+    @jwt_required()
+    def crea_prenotazione_con_menu():
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        data = request.get_json()
+        if not data:
+            return jsonify({"message": "Nessun dato inviato"}), 400
+
+        # Validazione della data
+        try:
+            data_prenotata = datetime.fromisoformat(data['data_prenotata'])
+        except Exception:
+            return jsonify({"message": "Formato data non valido"}), 400
+
+        # Controlla se il giorno è bloccato
+        blocked = BlockedDay.query.filter_by(blocked_date=data_prenotata.date()).first()
+        if blocked:
+            return jsonify({"message": "Giorno bloccato per le prenotazioni"}), 403
+
+        if data_prenotata < datetime.utcnow():
+            return jsonify({"message": "La data/ora prenotata non può essere antecedente all'ora attuale"}), 400
+
+        # Validazione numero di posti
+        try:
+            num_posti = int(data.get('numero_posti', 0))
+            if num_posti < 1:
+                return jsonify({"message": "Il numero di posti deve essere almeno 1"}), 400
+        except Exception:
+            return jsonify({"message": "Numero di posti non valido"}), 400
+
+        # Controllo della capienza giornaliera
+        posti_giornata = db.session.query(
+            db.func.sum(Prenotazione.numero_posti)
+        ).filter(
+            db.func.DATE(Prenotazione.data_prenotata) == data_prenotata.date(),
+            Prenotazione.stato == "attiva"
+        ).scalar() or 0
+
+        if posti_giornata + num_posti > 100:
+            return jsonify({"message": "Superato il numero massimo di posti disponibili per questa data"}), 400
+
+        # Validazione dei piatti
         if 'piatti' not in data or not isinstance(data['piatti'], list) or len(data['piatti']) == 0:
             return jsonify({"message": "Nessun piatto selezionato"}), 400
-        
+
         for item in data['piatti']:
             try:
                 if int(item.get('quantita', 0)) < 1:
                     return jsonify({"message": "La quantità per ogni piatto deve essere almeno 1"}), 400
             except Exception:
                 return jsonify({"message": "Quantità non valida per un piatto"}), 400
-        
-        # Creazione prenotazione e dettagli
+
         try:
             prenotazione = Prenotazione(
                 data_prenotata=data_prenotata,
@@ -219,9 +254,9 @@ def init_routes(app):
                 numero_posti=num_posti
             )
             db.session.add(prenotazione)
-            db.session.flush()  # Ottieni l'id_prenotazione
-            
-            # Aggiungi dettagli piatti
+            db.session.flush()  # per ottenere prenotazione.id_prenotazione
+
+            # Inserisci i dettagli dei piatti
             for item in data['piatti']:
                 dettaglio = DettagliPrenotazione(
                     fk_prenotazione=prenotazione.id_prenotazione,
@@ -229,8 +264,8 @@ def init_routes(app):
                     quantita=int(item['quantita'])
                 )
                 db.session.add(dettaglio)
-            
-            # Crea notifica
+
+            # Crea la notifica
             piatti_nomi = [Piatto.query.get(item['fk_piatto']).nome for item in data['piatti']]
             notifica = Notifica(
                 tipo="nuova_prenotazione_con_menu",
@@ -239,7 +274,7 @@ def init_routes(app):
             )
             db.session.add(notifica)
             db.session.commit()
-            
+
             return jsonify({
                 "message": "Prenotazione con menu creata con successo",
                 "prenotazione_id": prenotazione.id_prenotazione
@@ -247,8 +282,6 @@ def init_routes(app):
         except Exception as e:
             db.session.rollback()
             return jsonify({"message": f"Errore server: {str(e)}"}), 500
-
-
 
     @app.route('/api/prenotazioni/storico/<int:user_id>', methods=['GET'])
     @jwt_required()
@@ -266,9 +299,6 @@ def init_routes(app):
             })
         return jsonify(prenotazioni_data), 200
 
-   
-
-    # Ottieni la lista dei piatti disponibili (usato per il menù)
     @app.route('/api/menu', methods=['GET'])
     def get_piatti():
         piatti = Piatto.query.all()
@@ -280,7 +310,6 @@ def init_routes(app):
         } for p in piatti]
         return jsonify(piatti_data), 200
 
-    # Salva un nuovo menù (solo admin)
     @app.route('/api/menu', methods=['POST'])
     @jwt_required()
     def save_menu():
@@ -294,23 +323,20 @@ def init_routes(app):
         try:
             nuovo_menu = Menu(titolo=data['titolo'])
             db.session.add(nuovo_menu)
-            db.session.flush()  # Per ottenere nuovo_menu.id_menu
+            db.session.flush()  # per ottenere nuovo_menu.id_menu
 
-            sezioni_data = data['sezioni']  # Es. {"Antipasto": [{"id_piatto": 1}], ...}
+            sezioni_data = data['sezioni']
             for nome_sezione, items in sezioni_data.items():
-                # Trova o crea la sezione
                 sezione = MenuSezione.query.filter_by(nome_sezione=nome_sezione).first()
                 if not sezione:
                     sezione = MenuSezione(nome_sezione=nome_sezione)
                     db.session.add(sezione)
                     db.session.flush()
 
-                # Crea la relazione
                 rel = MenuSezioneRel(id_menu=nuovo_menu.id_menu, id_sezione=sezione.id_sezione)
                 db.session.add(rel)
                 db.session.flush()
 
-                # Aggiungi gli item
                 for item in items:
                     mi = MenuItem(id_menu_sezione=rel.id_menu_sezione, id_piatto=item['id_piatto'])
                     db.session.add(mi)
@@ -359,8 +385,7 @@ def init_routes(app):
             return jsonify(result), 200
         except Exception as e:
             return jsonify({"message": f"Errore nel recupero dei menù: {str(e)}"}), 500
-            
-            # Ottieni tutti i menù salvati
+
     @app.route('/api/menu/saved', methods=['GET'])
     @jwt_required()
     def get_saved_menus():
@@ -393,62 +418,56 @@ def init_routes(app):
             return jsonify(result), 200
         except Exception as e:
             return jsonify({"message": f"Errore nel recupero dei menù: {str(e)}"}), 500
+
     @app.route('/api/menu/<int:menu_id>', methods=['PUT'])
     @jwt_required()
     def update_menu(menu_id):
-            # Verifica che l'utente sia admin
-            user_id = get_jwt_identity()
-            user = User.query.get(user_id)
-            if not user or user.ruolo != RuoloEnum.admin:
-                return jsonify({"message": "Accesso negato"}), 403
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Accesso negato"}), 403
 
-            data = request.get_json()
-            if not data or 'titolo' not in data or 'sezioni' not in data:
-                return jsonify({"message": "Dati mancanti per l'aggiornamento del menù"}), 400
+        data = request.get_json()
+        if not data or 'titolo' not in data or 'sezioni' not in data:
+            return jsonify({"message": "Dati mancanti per l'aggiornamento del menù"}), 400
 
-            menu = Menu.query.get(menu_id)
-            if not menu:
-                return jsonify({"message": "Menù non trovato"}), 404
+        menu = Menu.query.get(menu_id)
+        if not menu:
+            return jsonify({"message": "Menù non trovato"}), 404
 
-            try:
-                # Aggiorna il titolo
-                menu.titolo = data['titolo']
-                
-                # Per aggiornare le sezioni, eliminiamo quelle esistenti e ricreiamo la relazione
-                for rel in menu.sezioni:
-                    # Se ci sono item associati, li eliminiamo prima
-                    for mi in rel.items:
-                        db.session.delete(mi)
-                    db.session.delete(rel)
-                db.session.flush()
+        try:
+            menu.titolo = data['titolo']
 
-                sezioni_data = data['sezioni']  # Es: {"Antipasto": [ { "id_piatto": 1 }, ... ], ... }
-                for nome_sezione, items in sezioni_data.items():
-                    # Trova o crea la sezione
-                    sezione = MenuSezione.query.filter_by(nome_sezione=nome_sezione).first()
-                    if not sezione:
-                        sezione = MenuSezione(nome_sezione=nome_sezione)
-                        db.session.add(sezione)
-                        db.session.flush()
-                    # Crea la relazione
-                    rel = MenuSezioneRel(id_menu=menu.id_menu, id_sezione=sezione.id_sezione)
-                    db.session.add(rel)
+            # Elimina le sezioni esistenti e relativi item
+            for rel in menu.sezioni:
+                for mi in rel.items:
+                    db.session.delete(mi)
+                db.session.delete(rel)
+            db.session.flush()
+
+            sezioni_data = data['sezioni']
+            for nome_sezione, items in sezioni_data.items():
+                sezione = MenuSezione.query.filter_by(nome_sezione=nome_sezione).first()
+                if not sezione:
+                    sezione = MenuSezione(nome_sezione=nome_sezione)
+                    db.session.add(sezione)
                     db.session.flush()
-                    # Aggiungi gli item
-                    for item in items:
-                        mi = MenuItem(id_menu_sezione=rel.id_menu_sezione, id_piatto=item['id_piatto'])
-                        db.session.add(mi)
+                rel = MenuSezioneRel(id_menu=menu.id_menu, id_sezione=sezione.id_sezione)
+                db.session.add(rel)
+                db.session.flush()
+                for item in items:
+                    mi = MenuItem(id_menu_sezione=rel.id_menu_sezione, id_piatto=item['id_piatto'])
+                    db.session.add(mi)
 
-                db.session.commit()
-                return jsonify({"message": "Menù aggiornato"}), 200
-            except Exception as e:
-                db.session.rollback()
-                return jsonify({"message": f"Errore nell'aggiornamento del menù: {str(e)}"}), 500
-                
+            db.session.commit()
+            return jsonify({"message": "Menù aggiornato"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"message": f"Errore nell'aggiornamento del menù: {str(e)}"}), 500
+
     @app.route('/api/menu/<int:menu_id>', methods=['DELETE'])
     @jwt_required()
     def delete_menu(menu_id):
-        # Verifica che l'utente sia admin
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         if not user or user.ruolo != RuoloEnum.admin:
@@ -459,7 +478,6 @@ def init_routes(app):
             return jsonify({"message": "Menù non trovato"}), 404
 
         try:
-            # Se vuoi, elimina anche tutte le relazioni e gli item associati
             for rel in menu.sezioni:
                 for mi in rel.items:
                     db.session.delete(mi)
@@ -481,16 +499,15 @@ def init_routes(app):
             response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
             return response, 200
 
-        user_id = int(get_jwt_identity())  # Converti in intero
+        user_id = int(get_jwt_identity())
         prenotazione = Prenotazione.query.get(prenotazione_id)
-        user = User.query.get(prenotazione.id_utente)
         if not prenotazione:
             return jsonify({"message": "Prenotazione non trovata"}), 404
-        
-        # Controllo: il proprietario o admin possono annullare
+
+        user = User.query.get(prenotazione.id_utente)
         if prenotazione.id_utente != user_id and user.ruolo != RuoloEnum.admin:
             return jsonify({"message": "Non autorizzato"}), 403
-        
+
         try:
             prenotazione.stato = "annullata"
             prenotazione.data_annullamento = datetime.utcnow()
@@ -501,16 +518,16 @@ def init_routes(app):
             )
             db.session.add(notifica)
             db.session.commit()
-            
-            
+
             response = jsonify({"message": "Prenotazione annullata"})
             response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
             return response, 200
         except Exception as e:
             db.session.rollback()
             return jsonify({"message": f"Errore: {str(e)}"}), 500
+
     @app.route('/api/notifiche', methods=['GET', 'OPTIONS'])
-    @jwt_required(optional=True)  # Permette OPTIONS senza autenticazione
+    @jwt_required(optional=True)
     def get_notifiche():
         if request.method == 'OPTIONS':
             response = jsonify({})
@@ -523,17 +540,17 @@ def init_routes(app):
         user = User.query.get(user_id)
         if not user or user.ruolo != RuoloEnum.admin:
             return jsonify({"message": "Accesso negato"}), 403
+
         letto = request.args.get('letto', None)
         if letto is not None:
             try:
-                letto = letto.lower() == 'true'  # Converte in booleano
+                letto = letto.lower() == 'true'
             except ValueError:
                 return jsonify({"message": "Parametro 'letto' non valido"}), 400
 
-        # Filtra le notifiche in base al parametro 'letto'
         query = Notifica.query.order_by(Notifica.data_notifica.desc())
         if letto is not None:
-         query = query.filter_by(letto=letto)
+            query = query.filter_by(letto=letto)
 
         notifiche = query.all()
         notifiche_data = []
@@ -561,7 +578,7 @@ def init_routes(app):
                 } if prenotazione else {}
             })
         return jsonify(notifiche_data), 200
-            
+
     @app.route('/api/notifiche/mark-all-read', methods=['PUT', 'OPTIONS'])
     @jwt_required()
     def mark_all_notifiche_as_read():
@@ -598,7 +615,7 @@ def init_routes(app):
             return response, 200
 
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)  # Correggi qui: 'User' → 'user'
+        user = User.query.get(user_id)
         if not user or user.ruolo != RuoloEnum.admin:
             return jsonify({"message": "Accesso negato"}), 403
 
@@ -609,7 +626,7 @@ def init_routes(app):
         notifica.letto = True
         db.session.commit()
         return jsonify({"message": "Notifica aggiornata"}), 200
-        
+
     @app.route('/api/prenotazioni/calendario', methods=['GET', 'OPTIONS'])
     @jwt_required()
     def get_prenotazioni_calendario():
@@ -626,7 +643,6 @@ def init_routes(app):
             return jsonify({"message": "Accesso negato"}), 403
 
         query = Prenotazione.query.filter_by(stato='attiva')
-        # ... [logica per filtrare le prenotazioni] ...
         result = []
         for p in query.all():
             utente = User.query.get(p.id_utente)
@@ -644,3 +660,101 @@ def init_routes(app):
         response = jsonify(result)
         response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
         return response, 200
+
+    @app.route('/api/posti-rimanenti', methods=['GET'])
+    def get_posti_rimanenti():
+        data = request.args.get('data')
+        try:
+            data_selezionata = datetime.fromisoformat(data).date()
+        except:
+            return jsonify({"message": "Formato data non valido"}), 400
+        blocked = BlockedDay.query.filter_by(blocked_date=data_selezionata).first()
+        if blocked:
+            return jsonify(0), 200
+        posti_esistenti = db.session.query(
+            db.func.sum(Prenotazione.numero_posti)
+        ).filter(
+            db.func.DATE(Prenotazione.data_prenotata) == data_selezionata,
+            Prenotazione.stato == "attiva"
+        ).scalar() or 0
+
+        posti_rimanenti = 100 - posti_esistenti
+        return jsonify(posti_rimanenti), 200
+
+    # Nel route /api/block-day
+    @app.route('/api/block-day', methods=['POST', 'OPTIONS'])
+    @jwt_required(optional=True)  # Permette OPTIONS senza token
+    def block_day():
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Accesso negato"}), 403
+
+        data = request.get_json()
+        try:
+            blocked_date = datetime.fromisoformat(data['date']).date()
+        except Exception:
+            return jsonify({"message": "Formato data non valido"}), 400
+
+        existing = BlockedDay.query.filter_by(blocked_date=blocked_date).first()
+        if existing:
+            return jsonify({"message": "Giorno già bloccato"}), 400
+
+        new_block = BlockedDay(blocked_date=blocked_date)
+        db.session.add(new_block)
+        db.session.commit()
+        response = jsonify({"message": "Giorno bloccato"}), 201
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+        return response
+
+    @app.route('/api/blocked-days',  methods=['GET', 'OPTIONS'])
+    @jwt_required()
+    def get_blocked_days():
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.ruolo != RuoloEnum.admin:
+            return jsonify({"message": "Accesso negato"}), 403
+            
+        days = BlockedDay.query.all()
+        response_data = [bd.blocked_date.isoformat() for bd in days]  # Corretto: blocked_date invece di days
+        response = jsonify(response_data)
+        response.status_code = 200
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+        return response  # Restituisci direttamente la response
+
+    @app.route('/api/blocked-days/<date_str>', methods=['DELETE', 'OPTIONS'])
+    @jwt_required()
+    def delete_blocked_day(date_str):
+        if request.method == 'OPTIONS':
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+            response.headers.add('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+            return response, 200
+        try:
+            date = datetime.fromisoformat(date_str).date()  # Converti stringa in date
+            blocked_day = BlockedDay.query.filter_by(blocked_date=date).first()
+            if not blocked_day:
+                return jsonify({"message": "Giorno non bloccato"}), 404
+            db.session.delete(blocked_day)
+            db.session.commit()
+            return jsonify({"message": "Giorno sbloccato"}), 200
+        except ValueError:
+            return jsonify({"message": "Formato data non valido"}), 400
+        except Exception as e:
+            db.session.rollback()
+            print(f"Errore durante lo sblocco: {str(e)}")
+            return jsonify({"message": f"Errore interno: {str(e)}"}), 500
