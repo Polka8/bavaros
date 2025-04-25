@@ -33,7 +33,7 @@ import { AdminService } from '../../shared/services/admin.service';
    <div class="filters">
      <div class="date-filter">
        <input type="date" [(ngModel)]="filterDate" (change)="applyDateFilter()">
-       <button (click)="clearDateFilter()">×</button>
+       <button class="clear" (click)="clearDateFilter()">×</button>
      </div>
      <select [(ngModel)]="sortOrder" (change)="applySort()">
        <option value="recent">Più recenti</option>
@@ -51,63 +51,119 @@ import { AdminService } from '../../shared/services/admin.service';
 
  `,
  styles: [`
-    .section-header {
-     display: flex;
-     justify-content: space-between;
-     align-items: center;
-     margin-bottom: 20px;
-   }
-   .filters {
-     display: flex;
-     gap: 10px;
-     align-items: center;
-   }
-   .date-filter {
-     position: relative;
-     display: flex;
-     align-items: center;
-   }
-   .date-filter button {
-     margin-left: 5px;
-     background: #ff4444;
-     color: white;
-     border: none;
-     border-radius: 50%;
-     cursor: pointer;
-   }
-   .mark-all {
-     background: #4CAF50;
-     color: white;
-     border: none;
-     padding: 8px 15px;
-     border-radius: 4px;
-     cursor: pointer;
-   }
-   .newsletter-container {
-     padding: 20px;
-   }
-   .tabs {
-     display: flex;
-     gap: 10px;
-     margin-bottom: 20px;
-   }
-   .tabs button {
-     padding: 10px;
-     cursor: pointer;
-   }
-     select {
-     padding: 5px;
-     border-radius: 4px;
-   }
-   .notifications-section {
-     background: white;
-     padding: 20px;
-     border-radius: 8px;
-     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-   }
-   .notifica-item {
-     margin-bottom: 15px;
-   }
+    .newsletter-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: auto;
+  background: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.tabs {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.tabs button {
+  padding: 10px 15px;
+  cursor: pointer;
+  background: rgb(28, 21, 18);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+.tabs button:hover {
+  background: rgb(28, 21, 18);
+}
+
+.notifications-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+h3 {
+  margin-bottom: 15px;
+  font-size: 1.5em;
+  color: #333;
+}
+.clear {
+witdh: 20px;
+height: 20px;
+padding: 5px;
+ }
+
+.notifica-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+.notifica-item:hover {
+  background: #f1f1f1;
+}
+
+.mark-all {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.mark-all:hover {
+  background: #218838;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.date-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.date-filter button {
+  margin-left: 5px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 5px;
+  transition: background 0.3s;
+}
+
+.date-filter button:hover {
+  background: #c82333;
+}
+
+select {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ced4da;
+  transition: border-color 0.3s;
+}
+
+select:focus {
+  border-color: #80bdff;
+  outline: none;
+}
  `]
 })
 export class NewsletterComponent implements OnInit {

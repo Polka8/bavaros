@@ -25,7 +25,9 @@ import {
   formatISO,
   getHours,
   getMinutes,
-  parseISO
+  parseISO,
+  startOfDay,
+  endOfDay
 } from 'date-fns';
 import { MatDatepickerModule, MatDatepicker } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -41,6 +43,7 @@ interface PrenotazioneInterface {
   numero_posti: number;
   menu_items?: string[];
   note_aggiuntive?: string;
+  end_date?: string;
 }
 
 interface EventGroup {
@@ -104,7 +107,9 @@ export class CalendarioComponent implements OnInit {
     });
   }
   
-
+  isSameDay(date1: Date, date2: Date): boolean {
+    return isSameDay(date1, date2);
+  }
 
   setView(view: CalendarView): void {
     this.view = view;
@@ -201,6 +206,14 @@ unblockDay(day: Date) {
         break;
     }
   }
+  getEventsForHour(hour: number): CalendarEvent[] {
+    return this.events.filter(event => {
+      // Controllo sia il giorno che l'ora
+      const sameDay = isSameDay(event.start, this.viewDate);
+      const eventHour = event.start.getHours();
+      return sameDay && eventHour === hour;
+    });
+  }
 
   getGroupedEvents(): EventGroup[] {
     const events = this.getEventsForTimeline();
@@ -264,7 +277,8 @@ unblockDay(day: Date) {
 
   private loadPrenotazioni(): void {
     let params: any = {};
-
+  
+    // Impostazione parametri in base alla vista
     switch (this.view) {
       case CalendarView.Month:
         params = {
@@ -272,6 +286,7 @@ unblockDay(day: Date) {
           mese: this.viewDate.getMonth() + 1
         };
         break;
+  
       case CalendarView.Week:
         const weekStart = startOfWeek(this.viewDate, { weekStartsOn: 1 });
         params = {
@@ -279,42 +294,42 @@ unblockDay(day: Date) {
           end_date: formatISO(endOfWeek(this.viewDate, { weekStartsOn: 1 }))
         };
         break;
+  
       case CalendarView.Day:
+        // Prendiamo tutto l'intervallo della giornata
+        const dayStart = new Date(
+          this.viewDate.getFullYear(),
+          this.viewDate.getMonth(),
+          this.viewDate.getDate()
+        );
+        const dayEnd = new Date(
+          this.viewDate.getFullYear(),
+          this.viewDate.getMonth(),
+          this.viewDate.getDate() + 1
+        );
         params = {
-          giorno: formatISO(this.viewDate, { representation: 'date' })
+          start_date: formatISO(startOfDay(this.viewDate)),
+          end_date: formatISO(endOfDay(this.viewDate))
         };
         break;
     }
-    this.prenotazioniService.getBlockedDays().subscribe(days => {
-      this.blockedDays = days;
-    });
-
+  
+    console.log('Parametri richiesta:', params); // Debug
+  
     this.prenotazioniService.getPrenotazioniAttive(params).subscribe({
       next: (reservations: PrenotazioneInterface[]) => {
-        console.log('Prenotazioni ricevute:', reservations); // <--- AGGIUNGI QUESTO
-
-        this.events = reservations.map((res) => {
-          let start = new Date(res.data_prenotata);
-          let end = new Date(res.data_prenotata);
-
-          if (this.view === CalendarView.Day) {
-            const dateParts = res.data_prenotata.split('T')[0].split('-');
-            const timeParts = res.data_prenotata.split('T')[1].split(':');
-            start = new Date(
-              parseInt(dateParts[0]),
-              parseInt(dateParts[1]) - 1,
-              parseInt(dateParts[2]),
-              parseInt(timeParts[0]),
-              parseInt(timeParts[1]),
-              parseInt(timeParts[2].split('.')[0])
-            );
-          // Imposta una durata minima di 30 minuti se non è specificata una fine
-          end = new Date(start.getTime() + 30 * 60 * 1000);
-          } else {
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+        console.log('Prenotazioni ricevute:', reservations);
+  
+        this.events = reservations.map(res => {
+          // Parsing corretto della data con timezone
+          const start = parseISO(res.data_prenotata);
+          const end = new Date(start.getTime() + 30 * 60 * 1000); // Durata minima 30 min
+  
+          // Se è presente una data di fine nel backend, sostituisci
+          if (res.end_date) {
+            end.setTime(parseISO(res.end_date).getTime());
           }
-
+  
           return {
             start: start,
             end: end,
@@ -329,28 +344,50 @@ unblockDay(day: Date) {
               cognome: res.cognome,
               posti: res.numero_posti,
               menu: res.menu_items || [],
-              note: res.note_aggiuntive || ''
+              note: res.note_aggiuntive || '',
+              dataOra: res.data_prenotata // Manteniamo il timestamp originale
             }
           };
         });
+  
+        // Ordina gli eventi per orario
         this.events.sort((a, b) => a.start.getTime() - b.start.getTime());
+        
+        console.log('Eventi processati:', this.events);
       },
       error: (error) => {
         console.error('Errore nel recupero delle prenotazioni:', error);
+        // Aggiungere eventuale gestione errori UI
+      },
+      complete: () => {
+        console.log('Caricamento prenotazioni completato');
       }
     });
   }
 
-  getEventsForDay(day: Date): CalendarEvent[] {
-    return this.events.filter(event => isSameDay(event.start, day));
-  }
+  
 
   getEventsForTimeline(): CalendarEvent[] {
     return this.events
       .filter(event => isSameDay(event.start, this.viewDate))
       .sort((a, b) => a.start.getTime() - b.start.getTime());
   }
-
+  getFirstOverflowPosition(): number {
+    console.log('getFirstOverflowPosition chiamata');
+    const firstOverflowEvent = this.getEventsForDay(this.viewDate).find(e => e.meta.overlapOrder >= 2);
+    return firstOverflowEvent ? this.calculateTopPosition(firstOverflowEvent) : 0;
+  }
+  calculateIndicatorLeftPosition(): number {
+    // Assuming you want to position the indicator based on the number of overlapping events
+    const totalOverlaps = this.getEventsForDay(this.viewDate).filter(event => event.meta.overlapOrder >= 2).length;
+    return 15 + ((100 - 30) / Math.max(totalOverlaps, 1) * 2); // Adjust the calculation as needed
+  }
+  countHiddenEvents(): number {
+    // Get the events for the current view date
+    const events = this.getEventsForDay(this.viewDate);
+    // Count the number of events that are overlapping (i.e., have an overlapOrder >= 2)
+    return events.filter(event => event.meta.overlapOrder >= 2).length;
+  }
   getEventsForDayTimeline(): CalendarEvent[] {
     const dailyEvents = this.events.filter(event => isSameDay(event.start, this.viewDate));
     console.log('Eventi del giorno:', dailyEvents.map(e => e.start)); // <--- AGGIUNGI QUESTO
@@ -379,25 +416,76 @@ unblockDay(day: Date) {
     return positionedEvents;
   }
   calculateTopPosition(event: CalendarEvent): number {
-    const startHour = getHours(event.start);
-    const startMinute = getMinutes(event.start);
-    const minutesFromMidnight = startHour * 60 + startMinute;
-    console.log('Evento:', event.meta.nome, 'Inizio:', event.start, 'Top:', minutesFromMidnight); // <--- AGGIUNGI QUESTO
-    return minutesFromMidnight;
+    const start = event.start;
+    const hours = start.getHours();
+    const minutes = start.getMinutes();
+    return (hours * 60 + minutes) * 1.2; // 1.2px per minuto
   }
 
-  calculateHeight(event: CalendarEvent): number {
-    const end = event.end ?? event.start; // Usa event.start se event.end è null o undefined
-    const durationMinutes = (end.getTime() - event.start.getTime()) / (1000 * 60);
-    return Math.max(durationMinutes, 30); // Altezza minima di 30px
+  calculateEventHeight(event: CalendarEvent): number {
+    const start = event.start.getTime();
+    const end = event.end?.getTime() || start;
+    const duration = (end - start) / (1000 * 60); // Durata in minuti
+    return duration * 1.2; // 1.2px per minuto
   }
+  getEventsForDay(day: Date): CalendarEvent[] {
+    const events = this.events.filter(event => isSameDay(event.start, day));
+    
+    // Nuova logica di sovrapposizione
+    const groupedEvents = this.groupOverlappingEvents(events);
+    return this.calculatePositions(groupedEvents);
+  }
+  
+private groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[][] {
+  const sortedEvents = [...events].sort((a, b) => a.start.getTime() - b.start.getTime());
+  const groups: CalendarEvent[][] = [];
+  
+  sortedEvents.forEach(event => {
+    let placed = false;
+    for (const group of groups) {
+      const lastEvent = group[group.length - 1];
+      if (event.start.getTime() < lastEvent.end!.getTime()) {
+        group.push(event);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      groups.push([event]);
+    }
+  });
+  
+  return groups;
+}
+showHiddenEventsIndicator(events: CalendarEvent[]): boolean {
+  return events.some(event => 
+    event.meta.overlapOrder >= 2 && 
+    event.meta.totalOverlaps > 3
+  );
+}
+private calculatePositions(groups: CalendarEvent[][]): CalendarEvent[] {
+  return groups.flatMap(group => 
+    group.map((event, index) => ({
+      ...event,
+      meta: {
+        ...event.meta,
+        overlapOrder: index,
+        totalOverlaps: group.length
+      }
+    }))
+  );
+}
 
-  getTooltipText(event: CalendarEvent): string {
-    return `${event.meta.nome} ${event.meta.cognome}
-Posti: ${event.meta.posti}
-${event.meta.menu?.length ? 'Menu: ' + event.meta.menu.join(', ') : ''}
-${event.meta.note ? 'Note: ' + event.meta.note : ''}`;
+getTooltipText(event: CalendarEvent): string {
+  let tooltip = `${event.meta.nome} ${event.meta.cognome}\nPosti: ${event.meta.posti}`;
+  if (event.meta.menu && event.meta.menu.length > 0) {
+    tooltip += `\nMenu: ${event.meta.menu.join(', ')}`;
   }
+  if (event.meta.note) {
+    tooltip += `\nNote: ${event.meta.note}`;
+  }
+  return tooltip;
+}
   // Removed duplicate openBlockConfirmation method
 
   isSameMonth(date1: Date, date2: Date): boolean {

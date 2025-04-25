@@ -91,6 +91,14 @@ import { MenuService } from '../shared/services/menu.service';
   `,
   styles: [`
     /* Hero Section */
+    .review-logo {
+        width: 100px; /* Imposta la larghezza desiderata */
+        height: 100px; /* Imposta l'altezza desiderata */
+        object-fit: contain; /* Mantiene le proporzioni dell'immagine */
+        margin-bottom: 1rem; /* Aggiunge spazio tra l'icona e il testo */
+        display: block; /* Assicura che l'immagine sia trattata come un blocco */
+        margin: 0 auto 1rem; /* Centra l'icona orizzontalmente */
+      }
     .hero-section {
       background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('src/assets/bavaros.png');
       background-size: cover;
@@ -227,6 +235,7 @@ import { MenuService } from '../shared/services/menu.service';
       .nav-arrow.next {
         right: -10px;
       }
+      
     }
   `]
 })

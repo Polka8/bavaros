@@ -1,14 +1,14 @@
-from flask import jsonify, request
+from flask import jsonify, request # type: ignore
 from .models import (
     BlockedDay, Notifica, db, User, RuoloEnum, Prenotazione,
     DettagliPrenotazione, Piatto, Menu, MenuSezione, MenuSezioneRel, MenuItem
 )
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity # type: ignore
 from datetime import timedelta, datetime
 import os
 import re
 import json
-from flask_cors import CORS  # gestione centralizzata del CORS
+from flask_cors import CORS  # type: ignore # gestione centralizzata del CORS
 
 def init_routes(app):
     # Abilita CORS per tutti gli endpoint /api/*, specificando l'origine consentita
@@ -681,31 +681,31 @@ def init_routes(app):
         posti_rimanenti = 100 - posti_esistenti
         return jsonify(posti_rimanenti), 200
 
-    # Nel route /api/block-day
+        # Nel route /api/block-day
     @app.route('/api/block-day', methods=['POST', 'OPTIONS'])
-    @jwt_required(optional=True)  # Permette OPTIONS senza token
+    @jwt_required()
     def block_day():
         if request.method == 'OPTIONS':
-            response = jsonify({})
-            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
-            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-            response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
-            return response, 200
+                response = jsonify({})
+                response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+                response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                response.headers.add('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+                return response, 200
 
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         if not user or user.ruolo != RuoloEnum.admin:
-            return jsonify({"message": "Accesso negato"}), 403
+                return jsonify({"message": "Accesso negato"}), 403
 
         data = request.get_json()
         try:
-            blocked_date = datetime.fromisoformat(data['date']).date()
+                    blocked_date = datetime.fromisoformat(data['date']).date()
         except Exception:
             return jsonify({"message": "Formato data non valido"}), 400
 
         existing = BlockedDay.query.filter_by(blocked_date=blocked_date).first()
         if existing:
-            return jsonify({"message": "Giorno già bloccato"}), 400
+                    return jsonify({"message": "Giorno già bloccato"}), 400
 
         new_block = BlockedDay(blocked_date=blocked_date)
         db.session.add(new_block)
