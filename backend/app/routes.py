@@ -326,18 +326,18 @@ def init_routes(app):
             db.session.flush()  # per ottenere nuovo_menu.id_menu
 
             sezioni_data = data['sezioni']
-            for nome_sezione, items in sezioni_data.items():
+            for nome_sezione, items in sezioni_data.items():# per ogni sezione
                 sezione = MenuSezione.query.filter_by(nome_sezione=nome_sezione).first()
                 if not sezione:
                     sezione = MenuSezione(nome_sezione=nome_sezione)
                     db.session.add(sezione)
                     db.session.flush()
 
-                rel = MenuSezioneRel(id_menu=nuovo_menu.id_menu, id_sezione=sezione.id_sezione)
+                rel = MenuSezioneRel(id_menu=nuovo_menu.id_menu, id_sezione=sezione.id_sezione)#per la relazione
                 db.session.add(rel)
                 db.session.flush()
 
-                for item in items:
+                for item in items:#per ogni piatto nella sezione
                     mi = MenuItem(id_menu_sezione=rel.id_menu_sezione, id_piatto=item['id_piatto'])
                     db.session.add(mi)
 
@@ -392,12 +392,12 @@ def init_routes(app):
         try:
             menus = Menu.query.all()
             result = []
-            for m in menus:
+            for m in menus:#per ogni menù
                 sezioni_list = []
-                for rel in m.sezioni:
+                for rel in m.sezioni:#per ogni sezione del menù
                     sezione_obj = MenuSezione.query.get(rel.id_sezione)
                     items = []
-                    for mi in rel.items:
+                    for mi in rel.items:#per ogni piatto della sezione
                         piatto = Piatto.query.get(mi.id_piatto)
                         items.append({
                             "id_piatto": piatto.id_piatto,
@@ -681,7 +681,7 @@ def init_routes(app):
         posti_rimanenti = 100 - posti_esistenti
         return jsonify(posti_rimanenti), 200
 
-        # Nel route /api/block-day
+        
     @app.route('/api/block-day', methods=['POST', 'OPTIONS'])
     @jwt_required()
     def block_day():
