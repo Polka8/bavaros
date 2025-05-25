@@ -1,4 +1,3 @@
-// profilo.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -30,14 +29,15 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
           <p>
             <strong>ID:</strong> {{ prenotazione.id_prenotazione }} -
             <strong>Data:</strong> {{ prenotazione.data_prenotata | date:'short' }} -
-            <strong>Stato:</strong> {{ prenotazione.stato }}
+            <strong>Stato:</strong> {{ prenotazione.stato }} -
+            <strong>Numero Posti:</strong> {{ prenotazione.numero_posti }} -
+            <strong>Piatti Ordinati:</strong> {{ getPiattiOrdinati(prenotazione) }}
           </p>
           <button (click)="cancelReservation(prenotazione.id_prenotazione)">Annulla</button>
         </div>
       </div>
       <div class="reservations-container" *ngIf="activeSection === 'all'">
         <h4>Tutte le Prenotazioni</h4>
-        <!-- Filtro -->
         <div class="filters">
           <input type="date" [(ngModel)]="filterDate" (change)="applyFilter()" />
           <div>
@@ -53,7 +53,9 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
           <p>
             <strong>ID:</strong> {{ prenotazione.id_prenotazione }} -
             <strong>Data:</strong> {{ prenotazione.data_prenotata | date:'short' }} -
-            <strong>Stato:</strong> {{ prenotazione.stato }}
+            <strong>Stato:</strong> {{ prenotazione.stato }} -
+            <strong>Numero Posti:</strong> {{ prenotazione.numero_posti }} -
+            <strong>Piatti Ordinati:</strong> {{ getPiattiOrdinati(prenotazione) }}
           </p>
         </div>
       </div>
@@ -64,108 +66,94 @@ import { PrenotazioniService } from '../shared/services/prenotazioni.service';
   `,
   styles: [`
     .profile-container {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 20px;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-h2 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-p {
-  font-size: 1.1em;
-  color: #555;
-}
-
-.sections-row {
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-  gap: 20px;
-}
-
-.section-box {
-  flex: 1;
-  min-width: 200px;
-  height: 100px;
-  background-color:rgb(28, 21, 18);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background 0.3s, transform 0.3s;
-}
-
-.section-box:hover {
-  background-color:rgb(28, 21, 18);
-  transform: translateY(-2px);
-}
-
-.reservations-container {
-  margin-top: 20px;
-  padding: 15px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #f9f9f9;
-}
-
-h4 {
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.filters {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-input[type="date"] {
-  padding: 8px;
-  border-radius: 5px;
-  border: 1px solid #ced4da;
-  transition: border-color 0.3s;
-}
-
-input[type="date"]:focus {
-  border-color: #80bdff;
-  outline: none;
-}
-
-select {
-  padding: 8px;
-  border-radius: 5px;
-  border: 1px solid #ced4da;
-  transition: border-color 0.3s;
-}
-
-select:focus {
-  border-color: #80bdff;
-  outline: none;
-}
-
-button {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-button:hover {
-  background-color: #c82333;
-}
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 1.1em;
+      color: #555;
+    }
+    .sections-row {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+      gap: 20px;
+    }
+    .section-box {
+      flex: 1;
+      min-width: 200px;
+      height: 100px;
+      background-color: rgb(28, 21, 18);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.3s, transform 0.3s;
+    }
+    .section-box:hover {
+      background-color: rgb(28, 21, 18);
+      transform: translateY(-2px);
+    }
+    .reservations-container {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    h4 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .filters {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    input[type="date"] {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+      transition: border-color 0.3s;
+    }
+    input[type="date"]:focus {
+      border-color: #80bdff;
+      outline: none;
+    }
+    select {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+      transition: border-color 0.3s;
+    }
+    select:focus {
+      border-color: #80bdff;
+      outline: none;
+    }
+    button {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #c82333;
+    }
   `]
 })
 export class ProfileComponent implements OnInit {
@@ -243,5 +231,12 @@ export class ProfileComponent implements OnInit {
       },
       error: err => console.error('Errore nell\'annullamento della prenotazione', err)
     });
+  }
+
+  getPiattiOrdinati(prenotazione: any): string {
+    if (prenotazione.piatti && prenotazione.piatti.length > 0) {
+      return prenotazione.piatti.map((piatto: any) => `${piatto.nome} (Quantità: ${piatto.quantita})`).join(', ');
+    }
+    return 'Nessun piatto ordinato';
   }
 }

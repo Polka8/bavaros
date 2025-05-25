@@ -55,55 +55,41 @@ def init_routes(app):
         except Exception as e:
             db.session.rollback()
             return jsonify({"message": f"Errore server: {str(e)}"}), 500
-
     @app.route('/api/login', methods=['POST'])
     def login():
-        data = request.get_json()
-        if not data or 'email' not in data or 'password' not in data:
-            return jsonify({"message": "Dati mancanti"}), 400
+            data = request.get_json()
+            if not data or 'email' not in data or 'password' not in data:
+                return jsonify({"message": "Dati mancanti"}), 400
+            user = User.query.filter_by(email=data['email']).first()
+            if not user:
+                return jsonify({"message": "Utente non trovato"}), 404
+            if not user.check_password(data['password']):
+                return jsonify({"message": "Password errata"}), 401
+            # Imposta il ruolo dell'utente in base a quello presente nel database
+            if user.ruolo == RuoloEnum.admin:
+                print("Ruolo impostato a admin")
+            else:
+                print("Ruolo impostato a cliente")
+                access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=1))
+            try:
+                    db.session.commit()
+            except Exception as e:
+                    db.session.rollback()
+                    return jsonify({"message": f"Errore di aggiornamento ruolo: {str(e)}"}), 500
 
-        user = User.query.filter_by(email=data['email']).first()
-        if not user:
-            return jsonify({"message": "Utente non trovato"}), 404
-
-        if not user.check_password(data['password']):
-            return jsonify({"message": "Password errata"}), 401
-
-        # Imposta le credenziali admin dai parametri d'ambiente o di default
-        admin_email = os.getenv('ADMIN_EMAIL', 'Gabrielcuter27@gmail.com')
-        admin_password = os.getenv('ADMIN_PASSWORD', 'Gabicu27')
-
-        print("Admin email:", admin_email)
-        print("Admin password:", admin_password)
-        print("Input email:", data['email'])
-        print("Input password:", data['password'])
-
-        if data['email'] == admin_email and data['password'] == admin_password:
-            user.ruolo = RuoloEnum.admin
-            print("Ruolo impostato a admin")
-        else:
-            user.ruolo = RuoloEnum.cliente
-            print("Ruolo impostato a cliente")
-
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"Errore di aggiornamento ruolo: {str(e)}"}), 500
-
-        access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=1))
-        return jsonify({
-            "message": "Login riuscito",
-            "token": access_token,
-            "user": {
-                "id": user.id,
-                "nome": user.nome,
-                "cognome": user.cognome,
-                "ruolo": user.ruolo.value,
-                "email": user.email,
-                "creato_il": user.creato_il.isoformat()
-            }
-        }), 200
+            access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=1))
+            return jsonify({
+                    "message": "Login riuscito",
+                    "token": access_token,
+                    "user": {
+                        "id": user.id,
+                        "nome": user.nome,
+                        "cognome": user.cognome,
+                        "ruolo": user.ruolo.value,
+                        "email": user.email,
+                        "creato_il": user.creato_il.isoformat()
+                    }
+                }), 200
 
     @app.route('/api/profilo', methods=['GET'])
     @jwt_required()
@@ -289,15 +275,27 @@ def init_routes(app):
         prenotazioni = Prenotazione.query.filter_by(id_utente=user_id).all()
         prenotazioni_data = []
         for p in prenotazioni:
+            # Recupera i dettagli dei piatti ordinati
+            dettagli = DettagliPrenotazione.query.filter_by(fk_prenotazione=p.id_prenotazione).all()
+            piatti_ordinati = [
+                {
+                    "nome": Piatto.query.get(d.fk_piatto).nome,
+                    "quantita": d.quantita
+                }
+                for d in dettagli
+            ]
+            
             prenotazioni_data.append({
                 "id_prenotazione": p.id_prenotazione,
                 "data_prenotata": p.data_prenotata.isoformat(),
                 "stato": p.stato,
                 "data_creazione": p.data_creazione.isoformat(),
                 "numero_posti": p.numero_posti,
-                "note_aggiuntive": p.note_aggiuntive
+                "note_aggiuntive": p.note_aggiuntive,
+                "piatti": piatti_ordinati  # Aggiungi i piatti ordinati
             })
         return jsonify(prenotazioni_data), 200
+
 
     @app.route('/api/menu', methods=['GET'])
     def get_piatti():

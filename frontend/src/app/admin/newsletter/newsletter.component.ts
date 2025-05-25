@@ -94,7 +94,7 @@ h3 {
   color: #333;
 }
 .clear {
-witdh: 20px;
+width: 20px;
 height: 20px;
 padding: 5px;
  }

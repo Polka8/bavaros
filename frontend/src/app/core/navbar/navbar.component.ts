@@ -38,6 +38,10 @@ import { CommonModule } from '@angular/common';
             <mat-icon>person</mat-icon>
             Profilo
           </a>
+          <a mat-menu-item routerLink="/prenota">
+            <mat-icon>restaurant</mat-icon>
+            Prenota
+          </a>
           <button mat-menu-item (click)="logout()">
             <mat-icon>logout</mat-icon>
             Logout

@@ -81,93 +81,110 @@ import { MatInputModule } from '@angular/material/input';
 
     </div>
   `,
-  styles: [`
-    .menu-management {
-      padding: 20px;
-    }
-    .menu-header input {
-      font-size: 1.2rem;
-      padding: 5px;
-      width: 100%;
-      margin-bottom: 15px;
-    }
-    .menu-preview {
-        margin: 10px 0;
-        padding: 10px;
-        background: #f8f8f8;
-        border-radius: 4px;
-      }
+    styles: [`
+  .menu-management {
+    padding: 20px;
+  }
 
-    .section-preview {
-        margin-bottom: 8px;
-      }
+  .menu-header input {
+    font-size: 1.2rem;
+    padding: 5px;
+    width: 100%;
+    margin-bottom: 15px;
+  }
 
-    .section-preview strong {
-        display: block;
-        margin-bottom: 4px;
-        color: #333;
-      }
-    .container {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .available-dishes {
-      width: 30%;
-      border: 1px solid #ccc;
-      padding: 10px;
-      border-radius: 4px;
-      background: #fafafa;
-    }
-    .available-dishes h3 {
-      text-align: center;
-      margin-top: 0;
-    }
-    .dish-item {
-      padding: 5px;
-      margin: 5px 0;
-      background: #f5f5f5;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: move;
-    }
-    .menu-sections {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      flex: 1;
-    }
+  .container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .available-dishes,
+  .menu-sections {
+    flex: 1 1 100%;
+  }
+
+  .available-dishes {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 4px;
+    background: #fafafa;
+  }
+
+  .available-dishes h3,
+  .section h3 {
+    text-align: center;
+    margin-top: 0;
+  }
+
+  .dish-item,
+  .menu-item {
+    padding: 5px;
+    margin: 5px 0;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: move;
+  }
+
+  .menu-sections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .section {
+    border: 1px dashed #ccc;
+    flex: 1 1 calc(50% - 20px);
+    min-width: 250px;
+    min-height: 150px;
+    padding: 10px;
+    border-radius: 4px;
+    background: #fff;
+  }
+
+  .saved-menus {
+    margin-top: 20px;
+  }
+
+  .saved-menu {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 5px 0;
+    cursor: pointer;
+  }
+
+  .menu-preview {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f8f8f8;
+    border-radius: 4px;
+  }
+
+  .section-preview {
+    margin-bottom: 8px;
+  }
+
+  .section-preview strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #333;
+  }
+
+  /* 🔁 Media query per schermi piccoli */
+  @media (max-width: 768px) {
     .section {
-      border: 1px dashed #ccc;
-      width: 45%;
-      min-height: 150px;
-      padding: 10px;
-      border-radius: 4px;
-      background: #fff;
+      flex: 1 1 100%;
     }
-    .section h3 {
-      text-align: center;
-      margin-top: 0;
+    .container {
+      flex-direction: column;
     }
-    .menu-item {
-      padding: 5px;
-      margin: 5px 0;
-      background: #e0f7fa;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: move;
-    }
-    .saved-menus {
-      margin-top: 20px;
-    }
-    .saved-menu {
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 10px;
-      margin: 5px 0;
-      cursor: pointer;
-    }
-  `]
+  }
+`]
+
+  
 })
 export class GestioneMenuComponent implements OnInit {
   currentMenuId: number | null = null; // Aggiungi questa riga nella classe
@@ -232,12 +249,11 @@ export class GestioneMenuComponent implements OnInit {
     }
   }
 
-  dropSection(event: CdkDragDrop<any[]>, section: string): void {
+ dropSection(event: CdkDragDrop<any[]>, section: string): void {
     if (event.previousContainer.id === 'availableDishes') {
-      // Usa transferArrayItem invece di clonare manualmente
       transferArrayItem(
-        event.previousContainer.data,  // Da qui
-        event.container.data,          // A qui
+        event.previousContainer.data,
+        event.container.data,
         event.previousIndex,
         event.currentIndex
       );
@@ -249,7 +265,23 @@ export class GestioneMenuComponent implements OnInit {
         event.container.data,
         event.previousIndex,
         event.currentIndex
-      );
+      )
+  }
+  this.scrollPage(event);
+  }
+   private scrollPage(event: CdkDragDrop<any[]>): void {
+    const dropListElement = event.container.element.nativeElement;
+    const scrollContainer = dropListElement.closest('.menu-sections'); // Assicurati di avere un contenitore scrollabile
+    if (scrollContainer) {
+      const scrollSpeed = 10; // Modifica questo valore per aumentare o diminuire la velocità di scorrimento
+      const scrollThreshold = 50; // Distanza dal bordo per attivare lo scorrimento
+      const rect = dropListElement.getBoundingClientRect();
+      const scrollTop = scrollContainer.scrollTop;
+      if (rect.top < scrollThreshold) {
+        scrollContainer.scrollTop = scrollTop - scrollSpeed; // Scorri verso l'alto
+      } else if (rect.bottom > scrollContainer.clientHeight - scrollThreshold) {
+        scrollContainer.scrollTop = scrollTop + scrollSpeed; // Scorri verso il basso
+      }
     }
   }
 

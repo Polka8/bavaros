@@ -70,15 +70,14 @@ import { MenuService } from '../shared/services/menu.service';
       </section>
 
       <!-- Sezione Recensioni -->
-      <mat-grid-list cols="3" rowHeight="350px" class="features-grid">
-        <mat-grid-tile *ngFor="let feature of features">
-          <mat-card class="feature-card">
-            <img [src]="feature.image" class="review-logo" alt="{{ feature.title }}">
-            <mat-card-title>{{ feature.title }}</mat-card-title>
-            <mat-card-content>{{ feature.description }}</mat-card-content>
-          </mat-card>
-        </mat-grid-tile>
-      </mat-grid-list>
+      <section class="features-grid">
+        <div class="feature-card" *ngFor="let feature of features">
+          <img [src]="feature.image" class="review-logo" alt="{{ feature.title }}">
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </div>
+      </section>
+
 
       <!-- Call to Action -->
       <section class="cta-section">
@@ -100,19 +99,17 @@ import { MenuService } from '../shared/services/menu.service';
         margin: 0 auto 1rem; /* Centra l'icona orizzontalmente */
       }
     .hero-section {
-      background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('src/assets/bavaros.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      height: calc(100vh - 64px);
-      margin-top: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      text-align: center;
-      padding: 1rem;
-    }
+  min-height: 60vh;
+  padding: 2rem 1rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.hero-content h1 {
+  font-size: clamp(1.5rem, 4vw, 3rem);
+}
 
     /* Menu Section */
     .menu-section {
@@ -124,6 +121,21 @@ import { MenuService } from '../shared/services/menu.service';
       position: relative;
       padding: 0 2rem;
     }
+      .features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  padding: 4rem 5%;
+}
+
+.feature-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 
     .menu-cards {
       display: flex;
@@ -145,6 +157,18 @@ import { MenuService } from '../shared/services/menu.service';
       flex: 0 0 calc(33% - 1rem);
       min-width: 400px;
     }
+
+.cta-section {
+  padding: 4rem 5%;
+  text-align: center;
+  background-color: #f5f5f5;
+}
+.cta-section h2 {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  margin-bottom: 2rem;
+}
+
+
 
     .menu-card {
       height: 500px;
@@ -201,6 +225,21 @@ import { MenuService } from '../shared/services/menu.service';
     .nav-arrow.next {
       right: -20px;
     }
+      @media (max-width: 480px) {
+  .hero-content h1,
+  .cta-section h2 {
+    font-size: 1.5rem;
+  }
+
+  .menu-card-wrapper {
+    min-width: 280px;
+  }
+
+  .menu-card {
+    height: 350px;
+  }
+}
+
 
     .nav-arrow:hover:not([disabled]) {
       transform: translateY(-50%) scale(1.1);
@@ -258,10 +297,17 @@ export class HomeComponent {
     private snackBar: MatSnackBar
   ) {}
 
-  ngOnInit() {
-    this.loadMenus();
-    this.updateUserName();
-  }
+ ngOnInit() {
+  this.loadMenus();
+  this.updateUserName();
+  this.updateVisibleMenus();
+  window.addEventListener('resize', this.updateVisibleMenus.bind(this));
+}
+ngOnDestroy() {
+  window.removeEventListener('resize', this.updateVisibleMenus.bind(this));
+}
+
+
   loadMenus(): void {
     this.menuService.getPublicMenus().subscribe({
       next: (menus) => {
