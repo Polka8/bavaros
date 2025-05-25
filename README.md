@@ -21,6 +21,7 @@ Bavaros è una potente web app fullstack per la gestione moderna di un ristorant
 🧑‍🍳 Modifica completa del menù tramite drag & drop
 
 🌍 Homepage
+
 Recensioni, anteprima del menù e invito alla prenotazione
 
 Routing automatico al login per azioni protette
@@ -28,6 +29,7 @@ Routing automatico al login per azioni protette
 Navbar dinamica con icone per login/profilo
 
 ⚙️ Tecnologie utilizzate
+
 Area	Stack
 Frontend	Angular 17+, SCSS
 Backend	Python (Flask o FastAPI)
@@ -35,6 +37,7 @@ Database	(PHPMyAdmin)
 Container	Docker, Docker Compose
 
 🔧 Configurazione ambiente
+
 Il progetto utilizza variabili d’ambiente per configurare le connessioni e la password del database.
 
 Crea un file .env nella cartella frontend/ con il seguente contenuto:
@@ -46,6 +49,7 @@ Se vuoi collaborare con altri, condividi solo il file .env.example.
 Il file .env.example fornisce un modello da cui partire.
 
 ▶️ Avvio del progetto
+
 Assicurati di avere Docker e Docker Compose installati.
 git clone https://github.com/tuo-utente/bavaros.git
 cd bavaros
@@ -64,10 +68,12 @@ Username: root
 Password: quella specificata nel file .env
 
 ⚠️ Sicurezza
+
 Il file .env contiene credenziali e configurazioni sensibili. Non deve mai essere incluso nel repository.
 Usa .env.example per condividere le variabili richieste senza rivelare valori reali.
 
 ✅ TODO (Future Improvements)
+
  Integrazione pagamenti online
 
  Notifiche email per conferme/annullamenti
@@ -77,8 +83,10 @@ Usa .env.example per condividere le variabili richieste senza rivelare valori re
  Upload immagini menù
 
 🤝 Contribuire
+
 Hai idee o miglioramenti? Apri una Issue o una Pull Request!
 Il contributo della community è benvenuto ❤️
 
 📜 Licenza
+
 Questo progetto è distribuito con licenza MIT. Vedi il file LICENSE per maggiori dettagli.
