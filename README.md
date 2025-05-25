@@ -34,44 +34,7 @@ Backend	Python (Flask o FastAPI)
 Database	(PHPMyAdmin)
 Container	Docker, Docker Compose
 
-📁 Struttura del progetto
-/bavaros
-├── frontend/
-│   └── src/app/
-│       ├── admin/
-│       │   ├── calendario/
-│       │   ├── gestione-menu/
-│       │   └── newsletter/
-│       ├── auth/
-│       │   ├── login/
-│       │   └── register/
-│       ├── core/
-│       │   ├── footer/
-│       │   ├── navbar/
-│       │   └── not-found/
-│       ├── environment/
-│       ├── features/
-│       │   └── dashboard/
-│       ├── home/
-│       ├── prenotazioni/
-│       │   ├── prenotazioni-con-menu/
-│       │   ├── prenotazioni-solo/
-│       │   ├── prenota/
-│       │   └── storico/
-│       ├── profilo/
-│       └── shared/
-│           ├── interceptors/
-│           ├── guards/
-│           └── services/
-│   ├── app.routes.ts
-│   ├── app.component.ts|html|scss
-│   └── app.config.ts
-│
-└── backend/
-    ├── routes.py
-    ├── models.py
-    ├── run.py
-    └── __init__.py
+
 ▶️ Esecuzione locale con Docker
 1. Clona il progetto
 git clone https://github.com/tuo-utente/bavaros.git
