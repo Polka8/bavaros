@@ -1,92 +1,45 @@
-🍽️ Bavaros - Gestione Ristorante (Fullstack Web App)
-Bavaros è una potente web app fullstack per la gestione moderna di un ristorante, sviluppata con Angular per il frontend e Python per il backend. Offre un sistema completo per la prenotazione, la gestione dei menù e il monitoraggio tramite calendario, con funzionalità differenziate per clienti e amministratori.
+# 🍽️ Bavaros – Sistema di Prenotazione per Ristoranti
 
-✅ 100% Docker Ready – Setup semplice e deploy immediato.
+**Autore:** Gabriel Cuter  
+**Contatto:** gabrielcuter27@gmail.com
 
-🚀 Features principali
-👤 Cliente
-✅ Login e registrazione
+## Descrizione
 
-📆 Prenotazione tavolo con o senza menù
+**Bavaros** è un sistema di prenotazioni online completo e personalizzabile, progettato per ristoranti che desiderano digitalizzare e ottimizzare la gestione delle prenotazioni.
 
-🗂️ Storico prenotazioni con possibilità di annullare quelle attive
+Realizzato come parte di un esame fullstack, il progetto è sviluppato con tecnologie moderne:
 
-👑 Admin
-📅 Calendario interattivo delle prenotazioni (giorno, settimana, mese)
+- **Frontend:** Angular
+- **Backend:** Python
+- **Containerizzazione:** Docker
 
-⛔ Blocco/sblocco di giorni specifici
+## Funzionalità principali
 
-🧾 Newsletter degli annullamenti ricevuti
+- Homepage con menù, recensioni e accesso rapido alla prenotazione
+- Registrazione e login per clienti
+- Dashboard amministratore con calendario interattivo
+- Gestione completa dei piatti (creazione, modifica, cancellazione)
+- Notifiche email automatiche per prenotazioni e annullamenti
+- Sezione Newsletter per tracciare le modifiche dei clienti
+- Avvio completo tramite Docker
 
-🧑‍🍳 Modifica completa del menù tramite drag & drop
+## Video dimostrativo
 
-🌍 Homepage
+🎥 Il video di demo è disponibile qui: [LINK_AL_VIDEO]
 
-Recensioni, anteprima del menù e invito alla prenotazione
+## ⚠️ Avviso Legale
 
-Routing automatico al login per azioni protette
+Il presente progetto è stato ideato, sviluppato e realizzato da **Gabriel Cuter**.  
+Ogni parte del codice, delle funzionalità e del design appartiene all’autore.
 
-Navbar dinamica con icone per login/profilo
+📌 **È vietata la copia, distribuzione, commercializzazione o riutilizzo del progetto (in tutto o in parte) senza espressa autorizzazione scritta.**
 
-⚙️ Tecnologie utilizzate
+Qualsiasi uso improprio sarà considerato una violazione dei diritti d’autore.
 
-Area	Stack
-Frontend	Angular 17+, SCSS
-Backend	Python (Flask o FastAPI)
-Database	(PHPMyAdmin)
-Container	Docker, Docker Compose
+## Licenza
 
-🔧 Configurazione ambiente
+**Progetto proprietario – Tutti i diritti riservati.**  
+Per collaborazioni o utilizzi su licenza, contattare l’autore via email.
 
-Il progetto utilizza variabili d’ambiente per configurare le connessioni e la password del database.
+---
 
-Crea un file .env nella cartella frontend/ con il seguente contenuto:
-env
-MYSQL_ROOT_PASSWORD=password123(o quella che preferisci)
-Non committare il file .env su GitHub: è già ignorato tramite .gitignore.
-Se vuoi collaborare con altri, condividi solo il file .env.example.
-
-Il file .env.example fornisce un modello da cui partire.
-
-▶️ Avvio del progetto
-
-Assicurati di avere Docker e Docker Compose installati.
-git clone https://github.com/tuo-utente/bavaros.git
-cd bavaros
-cp frontend/.env.example frontend/.env  # crea il file di configurazione
-docker-compose up --build
-Il progetto sarà disponibile su:
-
-Frontend: http://localhost:4200
-
-Backend API (Flask): http://localhost:3000
-
-phpMyAdmin: http://localhost:3307
-
-Username: root
-
-Password: quella specificata nel file .env
-
-⚠️ Sicurezza
-
-Il file .env contiene credenziali e configurazioni sensibili. Non deve mai essere incluso nel repository.
-Usa .env.example per condividere le variabili richieste senza rivelare valori reali.
-
-✅ TODO (Future Improvements)
-
- Integrazione pagamenti online
-
- Notifiche email per conferme/annullamenti
-
- Supporto multi-lingua
-
- Upload immagini menù
-
-🤝 Contribuire
-
-Hai idee o miglioramenti? Apri una Issue o una Pull Request!
-Il contributo della community è benvenuto ❤️
-
-📜 Licenza
-
-Questo progetto è distribuito con licenza MIT. Vedi il file LICENSE per maggiori dettagli.
